@@ -185,14 +185,28 @@
         static _evaluateRecursive(expr, context, fieldProvider) {
             // Remove outer parens safely
             while (expr.startsWith("(") && expr.endsWith(")")) {
-                if (this._findSplitIndex(expr.slice(1, -1), "__dummy__") === -1) {
+                // Check if the outer parens are a matching pair covering the whole expression
+                let depth = 0;
+                let isPair = true;
+                // Scan content excluding the very last char (which is known ')')
+                for (let i = 0; i < expr.length - 1; i++) {
+                    if (expr[i] === '(') depth++;
+                    else if (expr[i] === ')') depth--;
+                    
+                    // If depth hits 0 before the end, the start/end parens are NOT a pair
+                    // Example: "(a) && (b)" -> depth hits 0 after (a)
+                    if (depth === 0) {
+                        isPair = false;
+                        break;
+                    }
+                }
+                
+                if (isPair) {
                     expr = expr.slice(1, -1).trim();
                 } else {
                     break;
                 }
             }
-
-            // Logical OR
             let splitIdx = this._findSplitIndex(expr, "||");
             if (splitIdx !== -1) {
                 return this._evaluateRecursive(expr.substring(0, splitIdx), context, fieldProvider) || 
@@ -207,9 +221,9 @@
             }
 
             return this._evaluateAtom(expr, context, fieldProvider);
-        }
+                    }
 
-        static _findSplitIndex(text, sep) {
+                    static _findSplitIndex(text, sep) {
             let depth = 0;
             const sepLen = sep.length;
             for (let i = 0; i < text.length; i++) {
@@ -298,7 +312,8 @@
 
             // Dynamic Fields
             if (expr.startsWith("fields.")) {
-                return fieldProvider ? fieldProvider(expr.slice(7)) : null;
+                // Trim the key to ensure no trailing spaces "fields.a "
+                return fieldProvider ? fieldProvider(expr.slice(7).trim()) : null;
             }
             if (expr.startsWith("source.")) {
                 return context[expr.slice(7)];
@@ -321,7 +336,9 @@
                     return v;
                 }
             }
-            return expr; // Fallback to string literal if not found
+            // Strict mode: If not a literal or known variable, return null.
+            // Returning 'expr' caused security issues where "alert(1)" became true (non-empty string).
+            return null;
         }
     }
 
@@ -586,11 +603,13 @@
                 const fn = this.rules[name];
                 if (!fn) continue;
 
-                // "Required" runs always. Others skip if empty.
-                const isEmpty = (value === null || value === '' || value === undefined);
-                if (name !== 'required' && isEmpty) continue;
+                // "Required" rules run always. Others skip if empty.
+                                const isEmpty = (value === null || value === '' || value === undefined);
+                                const isRequiredRule = ['required', 'required_with', 'required_without'].includes(name);
 
-                if (!fn(value, param, el)) {
+                                if (!isRequiredRule && isEmpty) continue;
+
+                                if (!fn(value, param, el)) {
                     return { valid: false, failed: name, param: param };
                 }
             }
@@ -1230,6 +1249,7 @@
     // --- Expose Global API ---
     global.KrisForm = KrisForm;
     global.KrisFormValidator = Validator;
+    global.KrisFormEvaluator = Evaluator; // Exposed for Unit Testing
     global.KrisFormUtils = Utils;
 
     // --- Module Export (for tests/bundlers) ---
