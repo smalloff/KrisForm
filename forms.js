@@ -1232,4 +1232,9 @@
     global.KrisFormValidator = Validator;
     global.KrisFormUtils = Utils;
 
-})(window);
+    // --- Module Export (for tests/bundlers) ---
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { KrisForm, Validator, Evaluator, Utils };
+    }
+
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));
