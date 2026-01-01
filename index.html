@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KrisForm v2.2.1 Documentation</title>
+
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Code Highlight Theme (Dark) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --font-main: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --sidebar-width: 280px;
+
+            /* Sidebar Colors */
+            --sb-bg: #1e293b;
+            --sb-text: #ffffff;
+            --sb-text-muted: #94a3b8;
+            --sb-active-bg: #3b82f6;
+
+            /* Content */
+            --c-text: #334155;
+            --c-border: #e2e8f0;
+            --code-bg: #1e1e1e;
+        }
+
+        body {
+            font-family: var(--font-main);
+            color: var(--c-text);
+            background: #fff;
+            line-height: 1.6;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sb-bg) !important;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            z-index: 1040;
+            border-right: 1px solid #0f172a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand {
+            padding: 1.5rem 2rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-switch {
+            padding: 0.5rem 2rem;
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-btn {
+            font-size: 0.8rem;
+            color: var(--sb-text-muted);
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .lang-btn:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        .lang-btn.active {
+            background: var(--sb-active-bg);
+            color: #fff;
+            border-color: var(--sb-active-bg);
+        }
+
+        .nav-section {
+            padding: 1.5rem 2rem 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--sb-text-muted);
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.6rem 2rem;
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            color: #fff !important;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: #fff !important;
+            border-left-color: var(--sb-active-bg);
+        }
+
+        /* --- Main Content --- */
+        .main {
+            margin-left: var(--sidebar-width);
+            padding: 4rem 5rem;
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--c-border);
+            padding-bottom: 1rem;
+        }
+
+        h2 {
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            font-weight: 600;
+        }
+
+        /* --- Code Blocks --- */
+        pre[class*="language-"] {
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            background: #1e1e1e !important;
+            border: 1px solid #333;
+        }
+
+        code:not([class*="language-"]) {
+            font-family: var(--font-mono);
+            background: #f1f5f9;
+            color: #0284c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        /* --- Examples --- */
+        .ex-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 2rem 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        .ex-view {
+            padding: 2.5rem;
+            background: #fff;
+        }
+
+        .ex-code {
+            background: #1e1e1e;
+            padding: 0;
+            margin: 0;
+            border-top: 1px solid #333;
+        }
+
+        .ex-code pre {
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+        }
+
+        /* --- Modals (Demo) --- */
+        .vanilla-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(2px);
+            z-index: 20000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .vanilla-overlay.show {
+            display: flex !important;
+        }
+
+        .vanilla-modal {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1
+            }
+        }
+
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: 0.3s;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+
+            .mobile-trigger {
+                display: block;
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 2100;
+            }
+        }
+
+        .mobile-trigger {
+            display: none;
+        }
+    </style>
+</head>
+
+<body data-bs-spy="scroll" data-bs-target="#sidebar-nav">
+
+    <!-- Mobile Button -->
+    <button class="btn btn-primary rounded-circle p-3 shadow mobile-trigger" type="button" data-bs-toggle="offcanvas"
+        data-bs-target="#sidebar">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar offcanvas-lg offcanvas-start">
+        <div class="brand">KrisForm <span
+                style="opacity:0.5; font-weight:400; font-size:0.8em; margin-left:8px">v2.2.1</span></div>
+        
+        <!-- Language Switcher -->
+        <div class="lang-switch align-items-center">
+            <a href="index.html" class="lang-btn active">EN</a>
+            <a href="ru.html" class="lang-btn">RU</a>
+            <a href="https://github.com/smalloff/KrisForm" target="_blank" class="ms-auto text-white opacity-75 hover-opacity-100" style="transition: opacity 0.2s" title="View on GitHub">
+                <svg height="22" width="22" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            </a>
+        </div>
+
+        <div id="sidebar-nav">
+            <div class="nav-section">Introduction</div>
+            <a href="#intro" class="nav-link active">Getting Started</a>
+            <a href="#config" class="nav-link">Configuration</a>
+
+            <div class="nav-section">Reference</div>
+            <a href="#validation" class="nav-link">Validation Rules</a>
+            <a href="#custom-validators" class="nav-link">Custom Validators</a>
+            <a href="#dependencies" class="nav-link">JSON Dependencies</a>
+            <a href="#expressions" class="nav-link">Expression Syntax</a>
+
+            <div class="nav-section">Live Examples</div>
+            <a href="#ex-complex" class="nav-link">1. Complex Logic</a>
+            <a href="#ex-modals" class="nav-link">2. Modal Confirmations</a>
+            <a href="#ex-i18n" class="nav-link">3. Localization</a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="main">
+
+        <section id="intro">
+            <h1>Getting Started</h1>
+            <p class="lead">A pure JavaScript library for form management. Validation and targeted actions on form elements.</p>
+            <pre><code class="language-html">&lt;script src="forms.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    // Initialization on form element
+    new KrisForm(document.getElementById('my-form'));
+&lt;/script&gt;</code></pre>
+        </section>
+
+        <section id="config">
+            <h2>Configuration</h2>
+            <pre><code class="language-javascript">const options = {
+    updateDelay: 10, // Validation debounce (ms)
+    modalId: 'dependencyConfirmModal', // Default modal ID
+    
+    // System message texts
+    i18n: {
+        defaultError: "Validation failed",
+        confirmTitle: "Confirmation",
+        confirm: "Yes",
+        cancel: "Cancel"
+    },
+    
+    dependencies: [] // Logic array
+};</code></pre>
+        </section>
+
+        <!-- Real-world Demo -->
+                <section id="hero-demo" class="mb-5">
+                    <div class="card rounded-3 shadow-sm border">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 fw-bold">Contractor Registration</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="text-muted mb-4">Real-world example with dynamic fields and validation.</p>
+
+                            <form id="realForm" novalidate onsubmit="return false;">
+                                <div class="row g-4">
+                                    <!-- 1. Basic Info -->
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Admin Email</label>
+                                        <input name="biz_email" class="form-control" placeholder="admin@company.com" data-validator="required,email">
+                                        <div class="invalid-feedback"></div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Phone</label>
+                                        <input name="biz_phone" class="form-control" placeholder="+1 (555) 000-0000" data-validator="required,phone">
+                                        <div class="invalid-feedback"></div>
+                                    </div>
+
+                                    <!-- 2. Legal Entity Type (Dependency) -->
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Legal Form</label>
+                                        <select name="biz_type" class="form-select">
+                                            <option value="individual">Individual / Freelancer</option>
+                                            <option value="llc">Legal Entity (LLC/Corp)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- 3. Details (Hidden section) -->
+                                    <div class="col-12 field-container d-none p-0 m-0" id="biz_details">
+                                        <div class="row g-4 mt-0">
+                                            <div class="col-md-8">
+                                                <label class="form-label fw-semibold">Company Name</label>
+                                                <input name="biz_name" class="form-control" placeholder='Acme Corp'>
+                                                <div class="invalid-feedback"></div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">Tax ID</label>
+                                                <input name="biz_tax" class="form-control" placeholder="10 digits" data-validator="numeric,len:10">
+                                                <div class="invalid-feedback"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr class="text-muted opacity-25">
+
+                                    <!-- 4. Actions & Modal -->
+                            <div class="col-12 d-flex justify-content-between align-items-center">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="biz_reset" id="sw_biz">
+                                    <label class="form-check-label text-muted" for="sw_biz">Reset Data</label>
+                                </div>
+                                <button class="btn btn-dark px-4 fw-medium" onclick="window.realKris.validateAll() ? alert('Application Submitted') : null">
+                                    Register
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Modal specific to this example -->
+            <div id="hero-modal" class="vanilla-overlay">
+                <div class="vanilla-modal border-top border-4 border-primary">
+                    <h5 class="mb-3 fw-bold">Warning</h5>
+                    <p class="confirm-message text-muted mb-4 fs-6"></p>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-sm btn-light border btn-cancel">Cancel</button>
+                        <button class="btn btn-sm btn-primary btn-confirm">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="validation">
+            <h2>Validation Rules</h2>
+            <p>Add the <code>data-validator="rule1,rule2:param"</code> attribute to your input fields.</p>
+
+            <table class="doc-table table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th width="25%">Rule</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Basic -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Basic</small></td></tr>
+                    <tr>
+                        <td><code>required</code></td>
+                        <td>Field must not be empty.</td>
+                    </tr>
+                    <tr>
+                        <td><code>required_with:foo</code></td>
+                        <td>Required if field <code>foo</code> is present.</td>
+                    </tr>
+                    <tr>
+                        <td><code>required_without:foo</code></td>
+                        <td>Required if field <code>foo</code> is empty.</td>
+                    </tr>
+
+                    <!-- Logic & Comparison -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Logic & Comparison</small></td></tr>
+                    <tr>
+                        <td><code>eq:val</code> / <code>ne:val</code></td>
+                        <td>Equal / Not Equal to value.</td>
+                    </tr>
+                    <tr>
+                        <td><code>gt:N</code> / <code>lt:N</code></td>
+                        <td>Greater / Less than N (number) or length (string).</td>
+                    </tr>
+                    <tr>
+                        <td><code>gte:N</code> / <code>lte:N</code></td>
+                        <td>Greater/Equal / Less/Equal.</td>
+                    </tr>
+                    <tr>
+                        <td><code>oneof:a,b,c</code></td>
+                        <td>Value must be one of the listed.</td>
+                    </tr>
+                    <tr>
+                        <td><code>eqfield:name</code></td>
+                        <td>Equal to value of field <code>name</code> (e.g. Confirm Password).</td>
+                    </tr>
+                    <tr>
+                        <td><code>nefield:name</code></td>
+                        <td>Not equal to field <code>name</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>gtfield:name</code></td>
+                        <td>Value greater than field <code>name</code>.</td>
+                    </tr>
+
+                    <!-- Numeric & Length -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Numeric & Length</small></td></tr>
+                    <tr>
+                        <td><code>numeric</code></td>
+                        <td>Digits only (string).</td>
+                    </tr>
+                    <tr>
+                        <td><code>number</code></td>
+                        <td>Any valid number (integer/float/negative).</td>
+                    </tr>
+                    <tr>
+                        <td><code>len:N</code></td>
+                        <td>String length (or array size) exactly N.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min:N</code> / <code>max:N</code></td>
+                        <td>Min/Max value (number) or length (string).</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_alpha:N</code></td>
+                        <td>Min <code>N</code> alphabetic chars.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_upper:N</code></td>
+                        <td>Min <code>N</code> uppercase chars.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_digit:N</code></td>
+                        <td>Min <code>N</code> digits.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_symbol:N</code></td>
+                        <td>Min <code>N</code> special symbols.</td>
+                    </tr>
+
+                    <!-- Strings & Text -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>String & Format</small></td></tr>
+                    <tr>
+                        <td><code>alpha</code></td>
+                        <td>Alphabetic characters only.</td>
+                    </tr>
+                    <tr>
+                        <td><code>alphanum</code></td>
+                        <td>Alphanumeric characters.</td>
+                    </tr>
+                    <tr>
+                        <td><code>alphaunicode</code></td>
+                        <td>Letters (including Unicode/Cyrillic).</td>
+                    </tr>
+                    <tr>
+                        <td><code>lowercase</code> / <code>uppercase</code></td>
+                        <td>Lowercase only / Uppercase only.</td>
+                    </tr>
+                    <tr>
+                        <td><code>contains:str</code></td>
+                        <td>Must contain substring <code>str</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>startswith:str</code></td>
+                        <td>Must start with <code>str</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>email</code></td>
+                        <td>Valid Email address.</td>
+                    </tr>
+                    <tr>
+                        <td><code>json</code></td>
+                        <td>Valid JSON string.</td>
+                    </tr>
+                    <tr>
+                        <td><code>base64</code> / <code>base64url</code></td>
+                        <td>Base64 encoded string.</td>
+                    </tr>
+                    <tr>
+                        <td><code>hexcolor</code></td>
+                        <td>HEX Color (e.g. #f00 or #ff0000).</td>
+                    </tr>
+
+                    <!-- Contact & Identity -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Contact & Identity</small></td></tr>
+                    <tr>
+                        <td><code>phone</code></td>
+                        <td>Phone number (loose check, allows dashes/spaces).</td>
+                    </tr>
+                    <tr>
+                        <td><code>e164</code></td>
+                        <td>Strict international phone (e.g. +19990000000).</td>
+                    </tr>
+                    <tr>
+                        <td><code>credit_card</code></td>
+                        <td>Credit Card number (Luhn algorithm).</td>
+                    </tr>
+                    <tr>
+                        <td><code>bic</code></td>
+                        <td>SWIFT/BIC code.</td>
+                    </tr>
+                    <tr>
+                        <td><code>uuid</code> / <code>uuid4</code></td>
+                        <td>UUID identifier.</td>
+                    </tr>
+                    <tr>
+                        <td><code>btc_addr</code> / <code>eth_addr</code></td>
+                        <td>Bitcoin / Ethereum wallet address.</td>
+                    </tr>
+
+                    <!-- Network -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Network</small></td></tr>
+                    <tr>
+                        <td><code>url</code> / <code>http_url</code></td>
+                        <td>URL address (http_url requires http/s protocol).</td>
+                    </tr>
+                    <tr>
+                        <td><code>ip</code> / <code>ipv4</code> / <code>ipv6</code></td>
+                        <td>IP Address.</td>
+                    </tr>
+                    <tr>
+                        <td><code>cidr</code></td>
+                        <td>CIDR Subnet (e.g. 192.168.1.0/24).</td>
+                    </tr>
+                    <tr>
+                        <td><code>mac</code></td>
+                        <td>MAC Address.</td>
+                    </tr>
+                    <tr>
+                        <td><code>hostname</code></td>
+                        <td>Hostname (domain).</td>
+                    </tr>
+
+                    <!-- Date & File -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Date & File</small></td></tr>
+                    <tr>
+                        <td><code>datetime</code></td>
+                        <td>Valid date (JS Date.parse).</td>
+                    </tr>
+                    <tr>
+                        <td><code>datetime:layout</code></td>
+                        <td>Date in Go Layout. <br>Ex: <code>datetime:2006-01-02</code> (YYYY-MM-DD).</td>
+                    </tr>
+                    <tr>
+                        <td><code>timezone</code></td>
+                        <td>Valid IANA Timezone.</td>
+                    </tr>
+                    <tr>
+                        <td><code>ext:jpg;png</code></td>
+                        <td>File extension (for input type=file).</td>
+                    </tr>
+                    <tr>
+                        <td><code>image</code></td>
+                        <td>File is an image.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="custom-validators">
+            <h2>Custom Validators</h2>
+            <p>You can extend the library by adding custom check functions to a specific form instance. Rules are added directly to the <code>validator.rules</code> object.</p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-custom" novalidate onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Secret Code (enter: 777)</label>
+                            <input name="secret" class="form-control" data-validator="required,magic_code:777">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <button class="btn btn-dark btn-sm" onclick="window.krisCustom.validateAll()">Check</button>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">const kris = new KrisForm(document.getElementById('form-custom'));
+
+// 1. Add rule 'magic_code'
+kris.validator.rules.magic_code = function(value, param, el) {
+    // value - current field value
+    // param - parameter from HTML (e.g., "777")
+    // el - DOM element (useful for attribute checks)
+    
+    return value === param;
+};
+
+// 2. Add error message (optional)
+// If not added, default message is shown
+window.KrisFormTranslateMessages.magic_code = "Wrong code. Expected: %s";</code></pre>
+                </div>
+            </div>
+
+            <h4>Function Signature</h4>
+            <pre><code class="language-javascript">(value, param, element) => boolean</code></pre>
+            <ul>
+                <li><strong>value</strong>: Field value (always string, unless checkbox/file).</li>
+                <li><strong>param</strong>: Parameter string passed after colon (<code>rule:param</code>). <code>null</code> if no parameter.</li>
+                <li><strong>element</strong>: Reference to DOM element <code>input</code>, <code>select</code>, or <code>textarea</code>.</li>
+                <li><strong>return</strong>: Return <code>true</code> if validation passes. Return <code>false</code> for error.</li>
+            </ul>
+        </section>
+
+        <section id="dependencies">
+            <h2>JSON Dependencies</h2>
+            <p>Object structure for form logic management.</p>
+            <table class="doc-table table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>source</code></td>
+                        <td><code>name</code> of the field to watch.</td>
+                    </tr>
+                    <tr>
+                        <td><code>condition</code></td>
+                        <td>JS condition string. Example: <code>value === 'admin'</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>target</code></td>
+                        <td>Comma-separated list of target fields to affect.</td>
+                    </tr>
+                    <tr>
+                        <td><code>action</code></td>
+                        <td>Action to perform if condition is True.</td>
+                    </tr>
+                    <tr>
+                        <td><code>inverse_action</code></td>
+                        <td>Action to perform if condition is False.</td>
+                    </tr>
+                    <tr>
+                        <td><code>message</code></td>
+                        <td>Message text (HTML allowed) next to the target.</td>
+                    </tr>
+                    <tr>
+                        <td><code>confirm</code></td>
+                        <td>Text for the confirmation modal.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4 class="mt-4 mb-3">Action List</h4>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-light text-dark border">show / hide</span>
+                <span class="badge bg-light text-dark border">enable / disable</span>
+                <span class="badge bg-light text-dark border">required / optional</span>
+                <span class="badge bg-light text-dark border">check / uncheck</span>
+                <span class="badge bg-light text-dark border">clear</span>
+                <span class="badge bg-light text-dark border">set_value:X</span>
+                <span class="badge bg-light text-dark border">add_class:cls</span>
+            </div>
+        </section>
+
+        <section id="expressions">
+            <h2>Expression Syntax</h2>
+            <p>Used in the <code>condition</code> field.</p>
+            <ul>
+                <li><code>value</code> — value of the <code>source</code> field.</li>
+                <li><code>fields.OtherName</code> — value of another form field.</li>
+                <li><code>source.checked</code> — (for checkboxes) true/false.</li>
+                <li>Operators: <code>===</code>, <code>!==</code>, <code>&gt;</code>, <code>&lt;</code>,
+                    <code>&&</code>, <code>||</code>.</li>
+            </ul>
+        </section>
+
+        <!-- Example 1 -->
+        <section id="ex-complex">
+            <h2>1. Complex Logic</h2>
+            <p>Example: Selecting "Company" shows Tax ID field and makes it required.</p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-complex" novalidate onsubmit="return false;">
+                        <div class="row g-3">
+                            <div class="col-md-5 field-container">
+                                <label class="form-label fw-bold">Client Type</label>
+                                <select name="type" class="form-select">
+                                    <option value="person">Individual</option>
+                                    <option value="company">Company</option>
+                                </select>
+                            </div>
+                            <!-- Container hidden by default (d-none), ID matches JS config -->
+                            <div class="col-md-7 field-container d-none" id="cont_tax">
+                                <label class="form-label fw-bold">Tax ID <span class="text-danger">*</span></label>
+                                <input name="tax" class="form-control" placeholder="10 digits"
+                                    data-validator="numeric,len:10">
+                                <div class="invalid-feedback"></div>
+                                <div class="small text-primary mt-1 field-status-message">
+                                    <span class="status-text"></span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-dark"
+                                    onclick="window.kris1.validateAll() ? alert('Success!') : null">
+                                    Validate Form
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML Markup</h6>
+                    <pre class="m-0 mb-4"><code class="language-html">&lt;form id="form-complex"&gt;
+  &lt;select name="type" class="form-select"&gt;
+    &lt;option value="person"&gt;Individual&lt;/option&gt;
+    &lt;option value="company"&gt;Company&lt;/option&gt;
+  &lt;/select&gt;
+
+  &lt;!-- Tax Container (hidden by default) --&gt;
+  &lt;div id="cont_tax" class="d-none mt-3"&gt;
+    &lt;label&gt;Tax ID&lt;/label&gt;
+    &lt;input name="tax" class="form-control" data-validator="numeric,len:10"&gt;
+    &lt;div class="invalid-feedback"&gt;&lt;/div&gt;
+    &lt;!-- Place for dependency message --&gt;
+    &lt;div class="field-status-message small text-primary"&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/form&gt;</code></pre>
+
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">const rules = [
+  {
+    "source": "type", "condition": "value === 'company'",
+    "action": "show", "inverse_action": "hide", "target": "tax"
+  },
+  {
+    "source": "type", "condition": "value === 'company'",
+    "action": "required", "inverse_action": "optional", "target": "tax",
+    "message": "Tax ID is required for legal entities"
+  }
+];
+new KrisForm(document.getElementById('form-complex'), { dependencies: rules });</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Example 2 -->
+        <section id="ex-modals">
+            <h2>2. Modal Confirmations</h2>
+            <p>The library supports action confirmation. You can use Bootstrap or your own markup (Vanilla).</p>
+
+            <div class="row g-4 mb-4">
+                <!-- Preview -->
+                <div class="col-lg-6">
+                    <div class="ex-card mt-0 h-100">
+                        <div class="p-3 bg-light border-bottom fw-bold">Bootstrap 5</div>
+                        <div class="p-4 bg-white">
+                            <form id="form-bs">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="bs_sw" id="sw1">
+                                    <label class="form-check-label" for="sw1">Admin Mode</label>
+                                </div>
+                                <input name="bs_data" class="form-control" value="System Files" disabled>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="ex-card mt-0 h-100">
+                        <div class="p-3 bg-light border-bottom fw-bold">Vanilla JS</div>
+                        <div class="p-4 bg-white">
+                            <form id="form-vanilla">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="v_sw" id="sw2">
+                                    <label class="form-check-label" for="sw2">Delete Data</label>
+                                </div>
+                                <input name="v_data" class="form-control" value="Archive 2023" disabled>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div class="ex-code p-4 rounded-3">
+                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML (End of body)</h6>
+                <pre class="m-0 mb-4"><code class="language-html">&lt;!-- For Bootstrap: Standard markup --&gt;
+&lt;div class="modal fade" id="modal-bs" tabindex="-1"&gt;
+  &lt;div class="modal-dialog"&gt;
+    &lt;div class="modal-content"&gt;
+      &lt;div class="modal-body"&gt;
+        &lt;p class="confirm-message"&gt;&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;div class="modal-footer"&gt;
+        &lt;button class="btn btn-secondary btn-cancel"&gt;Cancel&lt;/button&gt;
+        &lt;button class="btn btn-primary btn-confirm"&gt;OK&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- For Vanilla: Custom markup --&gt;
+&lt;div id="modal-vanilla" style="display:none"&gt;
+  &lt;div class="my-custom-dialog"&gt;
+    &lt;p class="confirm-message"&gt;&lt;/p&gt;
+    &lt;button class="btn-cancel"&gt;No&lt;/button&gt;
+    &lt;button class="btn-confirm"&gt;Yes&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                <pre class="m-0"><code class="language-javascript">// Config for Bootstrap form
+new KrisForm(document.getElementById('form-bs'), {
+  modalId: 'modal-bs', // Modal ID
+  dependencies: [{
+    source: "bs_sw", condition: "checked === true", 
+    action: "enable", inverse_action: "disable", target: "bs_data",
+    confirm: "Enable admin mode?" // Confirmation text
+  }]
+});
+
+// Config for Vanilla form
+new KrisForm(document.getElementById('form-vanilla'), {
+  modalId: 'modal-vanilla',
+  dependencies: [{
+    source: "v_sw", condition: "checked === true", 
+    action: "enable", inverse_action: "disable", target: "v_data",
+    confirm: "Delete archive?"
+  }]
+});</code></pre>
+            </div>
+        </section>
+
+        <!-- Example 3 -->
+        <section id="ex-i18n">
+            <h2>3. Localization (Error Translation)</h2>
+            <p>
+                You can globally override error texts via the
+                <code>window.KrisFormTranslateMessages</code> object.
+                Click buttons below and try invalid inputs to see differences.
+            </p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <!-- Language Switcher -->
+                    <div class="btn-group mb-4 w-100">
+                        <button class="btn btn-outline-primary active" onclick="setLang('en', this)">English</button>
+                        <button class="btn btn-outline-primary" onclick="setLang('ru', this)">Русский</button>
+                        <button class="btn btn-outline-primary" onclick="setLang('de', this)">Deutsch</button>
+                    </div>
+
+                    <form id="form-i18n" novalidate onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <input name="email_i18n" class="form-control" data-validator="required,email">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Age (18+)</label>
+                            <input type="number" name="age_i18n" class="form-control"
+                                data-validator="required,numeric,min:18">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML</h6>
+                    <pre class="m-0 mb-4"><code class="language-html">&lt;form id="form-i18n"&gt;
+  &lt;label&gt;Age&lt;/label&gt;
+  &lt;input type="number" name="age" data-validator="required,min:18"&gt;
+&lt;/form&gt;</code></pre>
+
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">// Global Dictionary Setup
+window.KrisFormTranslateMessages = {
+  required: "This field is mandatory",
+  min: "Minimum value: %s"
+};
+
+// Dynamic language switch (example)
+function setLanguage(lang) {
+  if (lang === 'en') {
+    window.KrisFormTranslateMessages = { required: "Required", min: "Min: %s" };
+  } else {
+    window.KrisFormTranslateMessages = { required: "Обязательно", min: "Мин: %s" };
+  }
+}
+
+new KrisForm(document.getElementById('form-i18n'));</code></pre>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- === Hidden Modals === -->
+
+    <!-- 1. Bootstrap Modal Markup -->
+    <div class="modal fade" id="modal-bs" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bootstrap Confirmation</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-confirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Vanilla Modal Markup -->
+    <div id="modal-vanilla" class="vanilla-overlay">
+        <div class="vanilla-modal">
+            <h4 class="mb-3">Custom Dialog</h4>
+            <p class="confirm-message text-muted mb-4"></p>
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-light btn-cancel">No</button>
+                <button class="btn btn-dark btn-confirm">Yes, sure</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="forms.js"></script>
+
+    <script>
+        // Default Global Translations (English)
+        window.KrisFormTranslateMessages = {
+            required: "This field is required",
+            email: "Please enter a valid email",
+            phone: "Please enter a valid phone number",
+            e164: "International format required (+7...)",
+            url: "Invalid URL",
+            numeric: "Digits only",
+            alphanum: "Alphanumeric only",
+            len: "Must be exactly %s chars",
+            min: "Minimum value: %s",
+            max: "Maximum value: %s",
+            min_alpha: "Min letters: %s",
+            min_upper: "Min uppercase: %s",
+            min_digit: "Min digits: %s",
+            min_symbol: "Min special chars: %s",
+            default: "Error: %s"
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // 0. Real World Demo (Business Registration)
+            window.realKris = new KrisForm(document.getElementById('realForm'), {
+                modalId: 'hero-modal', // Unique modal for this demo
+                dependencies: [                 
+                    // 1. Payer Type Logic
+                    { 
+                        source: 'biz_type', 
+                        condition: "value === 'llc'", 
+                        action: 'show', inverse_action: 'hide', target: 'biz_details' 
+                    },
+                    { 
+                        source: 'biz_type', 
+                        condition: "value === 'llc'", 
+                        action: 'required', inverse_action: 'optional', target: 'biz_name, biz_tax' 
+                    },
+                    
+                    // 2. Reset Logic (Dialog + Clear + Auto-revert switcher)
+                    { 
+                        source: 'biz_reset', 
+                        condition: "checked === true", 
+                        action: 'clear', 
+                        target: 'biz_email, biz_phone, biz_name, biz_tax',
+                        confirm: "All fields will be cleared. Continue?"
+                    },
+                    {
+                        // Lock fields on clear to show state change
+                        source: 'biz_reset',
+                        condition: "checked === true",
+                        action: 'disable',
+                        inverse_action: 'enable',
+                        target: 'biz_email, biz_phone, biz_name, biz_tax'
+                    },
+                    {
+                        // Auto-reset switcher after clear
+                        source: 'biz_reset',
+                        condition: "checked === true",
+                        action: 'uncheck',
+                        target: 'biz_reset'
+                    }                 
+                ]
+            });
+
+            // 1. Complex
+            window.kris1 = new KrisForm(document.getElementById('form-complex'), {
+                dependencies: [
+                    { source: "type", condition: "value === 'company'", action: "show", inverse_action: "hide", target: "tax" },
+                    { source: "type", condition: "value === 'company'", action: "required", inverse_action: "optional", target: "tax", message: "Tax ID is required for companies" }
+                ]
+            });
+
+            // 2. Modals
+            const confirmLogic = (src, target, msg) => [{
+                source: src, condition: "checked === true", action: "enable", inverse_action: "disable", target: target, confirm: msg
+            }];
+
+            // BS Instance
+            new KrisForm(document.getElementById('form-bs'), {
+                dependencies: confirmLogic("bs_sw", "bs_data", "Enable admin mode?"),
+                modalId: 'modal-bs' // ID Bootstrap modal
+            });
+
+            // Vanilla Instance
+            new KrisForm(document.getElementById('form-vanilla'), {
+                dependencies: confirmLogic("v_sw", "v_data", "This action is irreversible. Continue?"),
+                modalId: 'modal-vanilla' // ID Vanilla modal
+            });
+
+            // 3. I18n Demo
+            window.krisI18n = new KrisForm(document.getElementById('form-i18n'));
+
+            // 4. Custom Validator Demo
+            window.krisCustom = new KrisForm(document.getElementById('form-custom'));
+            window.krisCustom.validator.rules.magic_code = function(value, param) {
+                return value === param;
+            };
+            // Add translation for custom rule
+            window.KrisFormTranslateMessages.magic_code = "Wrong code. Expected: %s";
+
+            // Language Switcher Function for Demo
+            window.setLang = function (lang, btn) {
+                // UI
+                const btns = btn.parentElement.children;
+                for (let b of btns) b.classList.remove('active');
+                btn.classList.add('active');
+
+                // Translation Logic
+                const dict = {
+                    ru: {
+                        required: "Это поле обязательно",
+                        email: "Некорректный email",
+                        phone: "Некорректный номер телефона",
+                        numeric: "Только цифры",
+                        min: "Минимум: %s",
+                        len: "Длина должна быть ровно %s знаков"
+                    },
+                    en: {
+                        required: "Field is required",
+                        email: "Invalid email format",
+                        numeric: "Digits only",
+                        min: "Minimum: %s",
+                        len: "Length must be exactly %s chars"
+                    },
+                    de: {
+                        required: "Dieses Feld ist erforderlich",
+                        email: "Ungültige E-Mail",
+                        numeric: "Nur Ziffern",
+                        min: "Minimum: %s",
+                        len: "Länge muss genau %s Zeichen sein"
+                    }
+                };
+
+                // Apply globally
+                window.KrisFormTranslateMessages = dict[lang];
+
+                // Re-validate to update messages instantly
+                window.krisI18n.validateAll();
+            };
+        });
+    </script>
+</body>
+
+</html>

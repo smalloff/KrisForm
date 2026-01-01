@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Документация KrisForm v2.2.1</title>
+
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Code Highlight Theme (Dark) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --font-main: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --sidebar-width: 280px;
+
+            /* Sidebar Colors */
+            --sb-bg: #1e293b;
+            --sb-text: #ffffff;
+            --sb-text-muted: #94a3b8;
+            --sb-active-bg: #3b82f6;
+
+            /* Content */
+            --c-text: #334155;
+            --c-border: #e2e8f0;
+            --code-bg: #1e1e1e;
+        }
+
+        body {
+            font-family: var(--font-main);
+            color: var(--c-text);
+            background: #fff;
+            line-height: 1.6;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sb-bg) !important;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            z-index: 1040;
+            border-right: 1px solid #0f172a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand {
+            padding: 1.5rem 2rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-switch {
+            padding: 0.5rem 2rem;
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-btn {
+            font-size: 0.8rem;
+            color: var(--sb-text-muted);
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .lang-btn:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        .lang-btn.active {
+            background: var(--sb-active-bg);
+            color: #fff;
+            border-color: var(--sb-active-bg);
+        }
+
+        .nav-section {
+            padding: 1.5rem 2rem 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--sb-text-muted);
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.6rem 2rem;
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            color: #fff !important;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: #fff !important;
+            border-left-color: var(--sb-active-bg);
+        }
+
+        /* --- Main Content --- */
+        .main {
+            margin-left: var(--sidebar-width);
+            padding: 4rem 5rem;
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--c-border);
+            padding-bottom: 1rem;
+        }
+
+        h2 {
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            font-weight: 600;
+        }
+
+        /* --- Code Blocks --- */
+        pre[class*="language-"] {
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            background: #1e1e1e !important;
+            border: 1px solid #333;
+        }
+
+        code:not([class*="language-"]) {
+            font-family: var(--font-mono);
+            background: #f1f5f9;
+            color: #0284c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        /* --- Examples --- */
+        .ex-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 2rem 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        .ex-view {
+            padding: 2.5rem;
+            background: #fff;
+        }
+
+        .ex-code {
+            background: #1e1e1e;
+            padding: 0;
+            margin: 0;
+            border-top: 1px solid #333;
+        }
+
+        .ex-code pre {
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+        }
+
+        /* --- Modals (Demo) --- */
+        .vanilla-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(2px);
+            z-index: 20000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .vanilla-overlay.show {
+            display: flex !important;
+        }
+
+        .vanilla-modal {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1
+            }
+        }
+
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: 0.3s;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+
+            .mobile-trigger {
+                display: block;
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 2100;
+            }
+        }
+
+        .mobile-trigger {
+            display: none;
+        }
+    </style>
+</head>
+
+<body data-bs-spy="scroll" data-bs-target="#sidebar-nav">
+
+    <!-- Mobile Button -->
+    <button class="btn btn-primary rounded-circle p-3 shadow mobile-trigger" type="button" data-bs-toggle="offcanvas"
+        data-bs-target="#sidebar">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar offcanvas-lg offcanvas-start">
+        <div class="brand">KrisForm <span
+                style="opacity:0.5; font-weight:400; font-size:0.8em; margin-left:8px">v2.2.1</span></div>
+        
+        <!-- Language Switcher -->
+        <div class="lang-switch align-items-center">
+            <a href="index.html" class="lang-btn">EN</a>
+            <a href="ru.html" class="lang-btn active">RU</a>
+            <a href="https://github.com/smalloff/KrisForm" target="_blank" class="ms-auto text-white opacity-75 hover-opacity-100" style="transition: opacity 0.2s" title="GitHub Репозиторий">
+                <svg height="22" width="22" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            </a>
+        </div>
+
+        <div id="sidebar-nav">
+            <div class="nav-section">Введение</div>
+            <a href="#intro" class="nav-link active">Начало работы</a>
+            <a href="#config" class="nav-link">Конфигурация</a>
+
+            <div class="nav-section">Справочник</div>
+            <a href="#validation" class="nav-link">Правила валидации</a>
+            <a href="#custom-validators" class="nav-link">Кастомные валидаторы</a>
+            <a href="#dependencies" class="nav-link">JSON Зависимости</a>
+            <a href="#expressions" class="nav-link">Синтаксис выражений</a>
+
+            <div class="nav-section">Живые примеры</div>
+            <a href="#ex-complex" class="nav-link">1. Сложная логика</a>
+            <a href="#ex-modals" class="nav-link">2. Модальные окна</a>
+            <a href="#ex-i18n" class="nav-link">3. Локализация</a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="main">
+
+        <section id="intro">
+            <h1>Начало работы</h1>
+            <p class="lead">Библиотека для управления формами на чистом JavaScript. Валидация и целевые действия с элементами формы.</p>
+            <pre><code class="language-html">&lt;script src="forms.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    // Инициализация на элементе формы
+    new KrisForm(document.getElementById('my-form'));
+&lt;/script&gt;</code></pre>
+        </section>
+
+        <section id="config">
+            <h2>Конфигурация</h2>
+            <pre><code class="language-javascript">const options = {
+    updateDelay: 10, // Задержка проверки (мс)
+    modalId: 'dependencyConfirmModal', // ID модального окна по умолчанию
+    
+    // Тексты системных сообщений
+    i18n: {
+        defaultError: "Ошибка валидации",
+        confirmTitle: "Подтверждение",
+        confirm: "Да",
+        cancel: "Отмена"
+    },
+    
+    dependencies: [] // Массив логики
+};</code></pre>
+        </section>
+
+        <!-- Real-world Demo -->
+                <section id="hero-demo" class="mb-5">
+                    <div class="card rounded-3 shadow-sm border">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 fw-bold">Регистрация контрагента</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="text-muted mb-4">Пример реальной формы с динамическими полями и валидацией.</p>
+
+                            <form id="realForm" novalidate onsubmit="return false;">
+                                <div class="row g-4">
+                                    <!-- 1. Основные данные -->
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Email администратора</label>
+                                        <input name="biz_email" class="form-control" placeholder="admin@company.com" data-validator="required,email">
+                                        <div class="invalid-feedback"></div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Телефон</label>
+                                        <input name="biz_phone" class="form-control" placeholder="+7 (999) 000-00-00" data-validator="required,phone">
+                                        <div class="invalid-feedback"></div>
+                                    </div>
+
+                                    <!-- 2. Тип Юр.Лица (Зависимость) -->
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Правовая форма</label>
+                                        <select name="biz_type" class="form-select">
+                                            <option value="individual">Физическое лицо</option>
+                                            <option value="llc">Юридическое лицо (ООО/АО)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- 3. Реквизиты (Скрытая секция) -->
+                                    <div class="col-12 field-container d-none p-0 m-0" id="biz_details">
+                                        <div class="row g-4 mt-0">
+                                            <div class="col-md-8">
+                                                <label class="form-label fw-semibold">Название организации</label>
+                                                <input name="biz_name" class="form-control" placeholder='ООО "Вектор"'>
+                                                <div class="invalid-feedback"></div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">ИНН</label>
+                                                <input name="biz_tax" class="form-control" placeholder="10 цифр" data-validator="numeric,len:10">
+                                                <div class="invalid-feedback"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr class="text-muted opacity-25">
+
+                                    <!-- 4. Действия и Модалка -->
+                            <div class="col-12 d-flex justify-content-between align-items-center">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="biz_reset" id="sw_biz">
+                                    <label class="form-check-label text-muted" for="sw_biz">Сбросить данные</label>
+                                </div>
+                                <button class="btn btn-dark px-4 fw-medium" onclick="window.realKris.validateAll() ? alert('Заявка отправлена') : null">
+                                    Зарегистрировать
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Модалка специально для этого примера -->
+            <div id="hero-modal" class="vanilla-overlay">
+                <div class="vanilla-modal border-top border-4 border-primary">
+                    <h5 class="mb-3 fw-bold">Внимание</h5>
+                    <p class="confirm-message text-muted mb-4 fs-6"></p>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-sm btn-light border btn-cancel">Отмена</button>
+                        <button class="btn btn-sm btn-primary btn-confirm">Подтвердить</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="validation">
+            <h2>Правила валидации</h2>
+            <p>Добавляйте атрибут <code>data-validator="rule1,rule2:param"</code> к полям ввода.</p>
+
+            <table class="doc-table table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th width="25%">Правило</th>
+                        <th>Описание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Базовые проверки -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Основные</small></td></tr>
+                    <tr>
+                        <td><code>required</code></td>
+                        <td>Обязательное поле (не пустое).</td>
+                    </tr>
+                    <tr>
+                        <td><code>required_with:foo</code></td>
+                        <td>Обязательно, если поле <code>foo</code> заполнено.</td>
+                    </tr>
+                    <tr>
+                        <td><code>required_without:foo</code></td>
+                        <td>Обязательно, если поле <code>foo</code> пустое.</td>
+                    </tr>
+
+                    <!-- Логика и Сравнение -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Сравнение и логика</small></td></tr>
+                    <tr>
+                        <td><code>eq:val</code> / <code>ne:val</code></td>
+                        <td>Равно / Не равно значению.</td>
+                    </tr>
+                    <tr>
+                        <td><code>gt:N</code> / <code>lt:N</code></td>
+                        <td>Больше / Меньше числа N (или длины строки).</td>
+                    </tr>
+                    <tr>
+                        <td><code>gte:N</code> / <code>lte:N</code></td>
+                        <td>Больше-равно / Меньше-равно.</td>
+                    </tr>
+                    <tr>
+                        <td><code>oneof:a,b,c</code></td>
+                        <td>Значение должно быть одним из списка.</td>
+                    </tr>
+                    <tr>
+                        <td><code>eqfield:name</code></td>
+                        <td>Значение равно значению поля <code>name</code> (например, повтор пароля).</td>
+                    </tr>
+                    <tr>
+                        <td><code>nefield:name</code></td>
+                        <td>Значение не равно полю <code>name</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>gtfield:name</code></td>
+                        <td>Значение больше, чем в поле <code>name</code>.</td>
+                    </tr>
+
+                    <!-- Числа и Длина -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Числа и длина</small></td></tr>
+                    <tr>
+                        <td><code>numeric</code></td>
+                        <td>Только цифры (строка).</td>
+                    </tr>
+                    <tr>
+                        <td><code>number</code></td>
+                        <td>Любое валидное число (включая float и отрицательные).</td>
+                    </tr>
+                    <tr>
+                        <td><code>len:N</code></td>
+                        <td>Длина строки (или массива) ровно N.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min:N</code> / <code>max:N</code></td>
+                        <td>Мин/Макс значение числа или длина строки.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_alpha:N</code></td>
+                        <td>Минимум <code>N</code> букв (A-Z).</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_upper:N</code></td>
+                        <td>Минимум <code>N</code> заглавных букв.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_digit:N</code></td>
+                        <td>Минимум <code>N</code> цифр.</td>
+                    </tr>
+                    <tr>
+                        <td><code>min_symbol:N</code></td>
+                        <td>Минимум <code>N</code> спецсимволов (!@#$...).</td>
+                    </tr>
+
+                    <!-- Строки и Текст -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Строки и формат</small></td></tr>
+                    <tr>
+                        <td><code>alpha</code></td>
+                        <td>Только латинские буквы.</td>
+                    </tr>
+                    <tr>
+                        <td><code>alphanum</code></td>
+                        <td>Буквы и цифры.</td>
+                    </tr>
+                    <tr>
+                        <td><code>alphaunicode</code></td>
+                        <td>Буквы (включая кириллицу и другие алфавиты).</td>
+                    </tr>
+                    <tr>
+                        <td><code>lowercase</code> / <code>uppercase</code></td>
+                        <td>Только строчные / только заглавные.</td>
+                    </tr>
+                    <tr>
+                        <td><code>contains:str</code></td>
+                        <td>Должно содержать подстроку <code>str</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>startswith:str</code></td>
+                        <td>Начинается с <code>str</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>email</code></td>
+                        <td>Валидный Email адрес.</td>
+                    </tr>
+                    <tr>
+                        <td><code>json</code></td>
+                        <td>Валидная JSON строка.</td>
+                    </tr>
+                    <tr>
+                        <td><code>base64</code> / <code>base64url</code></td>
+                        <td>Строка в формате Base64.</td>
+                    </tr>
+                    <tr>
+                        <td><code>hexcolor</code></td>
+                        <td>Цвет HEX (напр. #f00 или #ff0000).</td>
+                    </tr>
+
+                    <!-- Контакты и Личность -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Контакты и данные</small></td></tr>
+                    <tr>
+                        <td><code>phone</code></td>
+                        <td>Телефон (мягкая проверка, допускает скобки, дефисы).</td>
+                    </tr>
+                    <tr>
+                        <td><code>e164</code></td>
+                        <td>Строгий международный телефон (напр. +79990000000).</td>
+                    </tr>
+                    <tr>
+                        <td><code>credit_card</code></td>
+                        <td>Номер банковской карты (алгоритм Луна).</td>
+                    </tr>
+                    <tr>
+                        <td><code>bic</code></td>
+                        <td>Банковский SWIFT код.</td>
+                    </tr>
+                    <tr>
+                        <td><code>uuid</code> / <code>uuid4</code></td>
+                        <td>UUID идентификатор.</td>
+                    </tr>
+                    <tr>
+                        <td><code>btc_addr</code> / <code>eth_addr</code></td>
+                        <td>Адрес кошелька Bitcoin / Ethereum.</td>
+                    </tr>
+
+                    <!-- Сеть -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Сеть и интернет</small></td></tr>
+                    <tr>
+                        <td><code>url</code> / <code>http_url</code></td>
+                        <td>URL адрес (http_url требует протокол http/s).</td>
+                    </tr>
+                    <tr>
+                        <td><code>ip</code> / <code>ipv4</code> / <code>ipv6</code></td>
+                        <td>IP адрес.</td>
+                    </tr>
+                    <tr>
+                        <td><code>cidr</code></td>
+                        <td>CIDR подсеть (напр. 192.168.1.0/24).</td>
+                    </tr>
+                    <tr>
+                        <td><code>mac</code></td>
+                        <td>MAC адрес.</td>
+                    </tr>
+                    <tr>
+                        <td><code>hostname</code></td>
+                        <td>Имя хоста (домен).</td>
+                    </tr>
+
+                    <!-- Дата и Файлы -->
+                    <tr><td colspan="2" class="bg-light fw-bold text-dark"><small>Дата и файлы</small></td></tr>
+                    <tr>
+                        <td><code>datetime</code></td>
+                        <td>Валидная дата (JS Date.parse).</td>
+                    </tr>
+                    <tr>
+                        <td><code>datetime:layout</code></td>
+                        <td>Дата в формате Go Layout. <br>Пример: <code>datetime:2006-01-02</code> (ГГГГ-ММ-ДД).</td>
+                    </tr>
+                    <tr>
+                        <td><code>timezone</code></td>
+                        <td>Валидная временная зона (IANA).</td>
+                    </tr>
+                    <tr>
+                        <td><code>ext:jpg;png</code></td>
+                        <td>Расширение файла (для input type=file).</td>
+                    </tr>
+                    <tr>
+                        <td><code>image</code></td>
+                        <td>Файл является изображением.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="custom-validators">
+            <h2>Кастомные валидаторы</h2>
+            <p>Вы можете расширять функционал библиотеки, добавляя собственные функции проверки для конкретного экземпляра формы. Правила добавляются напрямую в объект <code>validator.rules</code>.</p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-custom" novalidate onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Секретный код (введите: 777)</label>
+                            <input name="secret" class="form-control" data-validator="required,magic_code:777">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <button class="btn btn-dark btn-sm" onclick="window.krisCustom.validateAll()">Проверить</button>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">const kris = new KrisForm(document.getElementById('form-custom'));
+
+// 1. Добавляем правило 'magic_code'
+kris.validator.rules.magic_code = function(value, param, el) {
+    // value - текущее значение поля
+    // param - параметр из HTML (в примере: "777")
+    // el - DOM элемент поля (удобно для проверки атрибутов)
+    
+    return value === param;
+};
+
+// 2. Добавляем текст ошибки (опционально)
+// Если не добавить, будет показано стандартное сообщение
+window.KrisFormTranslateMessages.magic_code = "Неверный код. Ожидается: %s";</code></pre>
+                </div>
+            </div>
+
+            <h4>Сигнатура функции</h4>
+            <pre><code class="language-javascript">(value, param, element) => boolean</code></pre>
+            <ul>
+                <li><strong>value</strong>: Значение поля (всегда строка, если это не чекбокс/файл).</li>
+                <li><strong>param</strong>: Строка параметра, переданная после двоеточия (<code>rule:param</code>). Если параметра нет — <code>null</code>.</li>
+                <li><strong>element</strong>: Ссылка на DOM-элемент <code>input</code>, <code>select</code> или <code>textarea</code>.</li>
+                <li><strong>return</strong>: Верните <code>true</code>, если валидация прошла успешно. Верните <code>false</code> для ошибки.</li>
+            </ul>
+        </section>
+
+        <section id="dependencies">
+            <h2>JSON Зависимости</h2>
+            <p>Структура объекта для управления логикой формы.</p>
+            <table class="doc-table table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Свойство</th>
+                        <th>Описание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>source</code></td>
+                        <td><code>name</code> поля, за которым следим.</td>
+                    </tr>
+                    <tr>
+                        <td><code>condition</code></td>
+                        <td>Условие JS (строка). Например: <code>value === 'admin'</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>target</code></td>
+                        <td>Список полей (через запятую), на которые влияем.</td>
+                    </tr>
+                    <tr>
+                        <td><code>action</code></td>
+                        <td>Действие при выполнении условия (True).</td>
+                    </tr>
+                    <tr>
+                        <td><code>inverse_action</code></td>
+                        <td>Действие при невыполнении (False).</td>
+                    </tr>
+                    <tr>
+                        <td><code>message</code></td>
+                        <td>Текст сообщения (можно HTML) рядом с целью.</td>
+                    </tr>
+                    <tr>
+                        <td><code>confirm</code></td>
+                        <td>Текст для модального окна подтверждения.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4 class="mt-4 mb-3">Список действий (Actions)</h4>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-light text-dark border">show / hide</span>
+                <span class="badge bg-light text-dark border">enable / disable</span>
+                <span class="badge bg-light text-dark border">required / optional</span>
+                <span class="badge bg-light text-dark border">check / uncheck</span>
+                <span class="badge bg-light text-dark border">clear</span>
+                <span class="badge bg-light text-dark border">set_value:X</span>
+                <span class="badge bg-light text-dark border">add_class:cls</span>
+            </div>
+        </section>
+
+        <section id="expressions">
+            <h2>Синтаксис выражений</h2>
+            <p>Используется в поле <code>condition</code>.</p>
+            <ul>
+                <li><code>value</code> — значение поля <code>source</code>.</li>
+                <li><code>fields.OtherName</code> — значение другого поля формы.</li>
+                <li><code>source.checked</code> — (для чекбоксов) true/false.</li>
+                <li>Операторы: <code>===</code>, <code>!==</code>, <code>&gt;</code>, <code>&lt;</code>,
+                    <code>&&</code>, <code>||</code>.</li>
+            </ul>
+        </section>
+
+        <!-- Example 1 -->
+        <section id="ex-complex">
+            <h2>1. Сложная логика</h2>
+            <p>Пример: Выбор "Компании" показывает поле ИНН и делает его обязательным.</p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-complex" novalidate onsubmit="return false;">
+                        <div class="row g-3">
+                            <div class="col-md-5 field-container">
+                                <label class="form-label fw-bold">Тип клиента</label>
+                                <select name="type" class="form-select">
+                                    <option value="person">Физическое лицо</option>
+                                    <option value="company">Компания</option>
+                                </select>
+                            </div>
+                            <!-- Контейнер скрыт по умолчанию (d-none), ID совпадает с конфигом JS -->
+                            <div class="col-md-7 field-container d-none" id="cont_tax">
+                                <label class="form-label fw-bold">ИНН <span class="text-danger">*</span></label>
+                                <input name="tax" class="form-control" placeholder="10 цифр"
+                                    data-validator="numeric,len:10">
+                                <div class="invalid-feedback"></div>
+                                <div class="small text-primary mt-1 field-status-message">
+                                    <span class="status-text"></span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-dark"
+                                    onclick="window.kris1.validateAll() ? alert('Успешно!') : null">
+                                    Проверить форму
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML Разметка</h6>
+                    <pre class="m-0 mb-4"><code class="language-html">&lt;form id="form-complex"&gt;
+  &lt;select name="type" class="form-select"&gt;
+    &lt;option value="person"&gt;Физическое лицо&lt;/option&gt;
+    &lt;option value="company"&gt;Компания&lt;/option&gt;
+  &lt;/select&gt;
+
+  &lt;!-- Контейнер ИНН (скрыт по умолчанию) --&gt;
+  &lt;div id="cont_tax" class="d-none mt-3"&gt;
+    &lt;label&gt;ИНН&lt;/label&gt;
+    &lt;input name="tax" class="form-control" data-validator="numeric,len:10"&gt;
+    &lt;div class="invalid-feedback"&gt;&lt;/div&gt;
+    &lt;!-- Место для сообщения зависимости --&gt;
+    &lt;div class="field-status-message small text-primary"&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/form&gt;</code></pre>
+
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">const rules = [
+  {
+    "source": "type", "condition": "value === 'company'",
+    "action": "show", "inverse_action": "hide", "target": "tax"
+  },
+  {
+    "source": "type", "condition": "value === 'company'",
+    "action": "required", "inverse_action": "optional", "target": "tax",
+    "message": "Для юр. лиц ИНН обязателен"
+  }
+];
+new KrisForm(document.getElementById('form-complex'), { dependencies: rules });</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Example 2 -->
+        <section id="ex-modals">
+            <h2>2. Модальные окна</h2>
+            <p>Библиотека поддерживает подтверждение действий. Вы можете использовать Bootstrap или свою верстку
+                (Vanilla).</p>
+
+            <div class="row g-4 mb-4">
+                <!-- Демонстрация (Preview) -->
+                <div class="col-lg-6">
+                    <div class="ex-card mt-0 h-100">
+                        <div class="p-3 bg-light border-bottom fw-bold">Bootstrap 5</div>
+                        <div class="p-4 bg-white">
+                            <form id="form-bs">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="bs_sw" id="sw1">
+                                    <label class="form-check-label" for="sw1">Админ-режим</label>
+                                </div>
+                                <input name="bs_data" class="form-control" value="Системные файлы" disabled>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="ex-card mt-0 h-100">
+                        <div class="p-3 bg-light border-bottom fw-bold">Ванильный JS</div>
+                        <div class="p-4 bg-white">
+                            <form id="form-vanilla">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="v_sw" id="sw2">
+                                    <label class="form-check-label" for="sw2">Удаление данных</label>
+                                </div>
+                                <input name="v_data" class="form-control" value="Архив 2023" disabled>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Код примера -->
+            <div class="ex-code p-4 rounded-3">
+                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML (В конце body)</h6>
+                <pre class="m-0 mb-4"><code class="language-html">&lt;!-- Для Bootstrap: Стандартная разметка --&gt;
+&lt;div class="modal fade" id="modal-bs" tabindex="-1"&gt;
+  &lt;div class="modal-dialog"&gt;
+    &lt;div class="modal-content"&gt;
+      &lt;div class="modal-body"&gt;
+        &lt;p class="confirm-message"&gt;&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;div class="modal-footer"&gt;
+        &lt;button class="btn btn-secondary btn-cancel"&gt;Отмена&lt;/button&gt;
+        &lt;button class="btn btn-primary btn-confirm"&gt;ОК&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Для Vanilla: Кастомная верстка --&gt;
+&lt;div id="modal-vanilla" style="display:none"&gt;
+  &lt;div class="my-custom-dialog"&gt;
+    &lt;p class="confirm-message"&gt;&lt;/p&gt;
+    &lt;button class="btn-cancel"&gt;Нет&lt;/button&gt;
+    &lt;button class="btn-confirm"&gt;Да&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                <pre class="m-0"><code class="language-javascript">// Конфигурация для Bootstrap формы
+new KrisForm(document.getElementById('form-bs'), {
+  modalId: 'modal-bs', // ID модального окна
+  dependencies: [{
+    source: "bs_sw", condition: "checked === true", 
+    action: "enable", inverse_action: "disable", target: "bs_data",
+    confirm: "Включить режим администратора?" // Текст подтверждения
+  }]
+});
+
+// Конфигурация для Ванильной формы
+new KrisForm(document.getElementById('form-vanilla'), {
+  modalId: 'modal-vanilla',
+  dependencies: [{
+    source: "v_sw", condition: "checked === true", 
+    action: "enable", inverse_action: "disable", target: "v_data",
+    confirm: "Удалить архив?"
+  }]
+});</code></pre>
+            </div>
+        </section>
+
+        <!-- Example 3 -->
+        <section id="ex-i18n">
+            <h2>3. Локализация (Перевод ошибок)</h2>
+            <p>
+                Вы можете глобально переопределить тексты ошибок через объект
+                <code>window.KrisFormTranslateMessages</code>.
+                Нажмите на кнопки ниже и попробуйте ввести некорректные значения, чтобы увидеть разницу.
+            </p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <!-- Language Switcher -->
+                    <div class="btn-group mb-4 w-100">
+                        <button class="btn btn-outline-primary active" onclick="setLang('ru', this)">Русский</button>
+                        <button class="btn btn-outline-primary" onclick="setLang('en', this)">English</button>
+                        <button class="btn btn-outline-primary" onclick="setLang('de', this)">Deutsch</button>
+                    </div>
+
+                    <form id="form-i18n" novalidate onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <input name="email_i18n" class="form-control" data-validator="required,email">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Возраст (18+)</label>
+                            <input type="number" name="age_i18n" class="form-control"
+                                data-validator="required,numeric,min:18">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML</h6>
+                    <pre class="m-0 mb-4"><code class="language-html">&lt;form id="form-i18n"&gt;
+  &lt;label&gt;Возраст&lt;/label&gt;
+  &lt;input type="number" name="age" data-validator="required,min:18"&gt;
+&lt;/form&gt;</code></pre>
+
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">// Глобальная настройка словаря
+window.KrisFormTranslateMessages = {
+  required: "Это поле обязательно",
+  min: "Минимальное значение: %s"
+};
+
+// Динамическая смена языка (пример)
+function setLanguage(lang) {
+  if (lang === 'en') {
+    window.KrisFormTranslateMessages = { required: "Required", min: "Min: %s" };
+  } else {
+    window.KrisFormTranslateMessages = { required: "Обязательно", min: "Мин: %s" };
+  }
+}
+
+new KrisForm(document.getElementById('form-i18n'));</code></pre>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- === Hidden Modals === -->
+
+    <!-- 1. Bootstrap Modal Markup -->
+    <div class="modal fade" id="modal-bs" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bootstrap Подтверждение</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary btn-confirm">Подтвердить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Vanilla Modal Markup -->
+    <div id="modal-vanilla" class="vanilla-overlay">
+        <div class="vanilla-modal">
+            <h4 class="mb-3">Кастомный диалог</h4>
+            <p class="confirm-message text-muted mb-4"></p>
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-light btn-cancel">Нет</button>
+                <button class="btn btn-dark btn-confirm">Да, уверен</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="forms.js"></script>
+
+    <script>
+        // Глобальные переводы ошибок (Используем Ваше имя переменной)
+        window.KrisFormTranslateMessages = {
+            required: "Это поле обязательно",
+            email: "Введите корректный email",
+            phone: "Введите корректный номер телефона",
+            e164: "Требуется международный формат (+7...)",
+            url: "Некорректная ссылка",
+            numeric: "Разрешены только цифры",
+            alphanum: "Только буквы и цифры",
+            len: "Должно быть ровно %s символов",
+            min: "Минимальное значение: %s",
+            max: "Максимальное значение: %s",
+            min_alpha: "Минимум букв: %s",
+            min_upper: "Минимум заглавных: %s",
+            min_digit: "Минимум цифр: %s",
+            min_symbol: "Минимум спецсимволов: %s",
+            default: "Ошибка: %s"
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // 0. Real World Demo (Бизнес регистрация)
+            window.realKris = new KrisForm(document.getElementById('realForm'), {
+                modalId: 'hero-modal', // Используем уникальную модалку этого примера
+                dependencies: [                 
+                    // 1. Логика типа плательщика
+                    { 
+                        source: 'biz_type', 
+                        condition: "value === 'llc'", 
+                        action: 'show', inverse_action: 'hide', target: 'biz_details' 
+                    },
+                    { 
+                        source: 'biz_type', 
+                        condition: "value === 'llc'", 
+                        action: 'required', inverse_action: 'optional', target: 'biz_name, biz_tax' 
+                    },
+                    
+                    // 2. Логика сброса (Диалог + Очистка + Авто-возврат свитчера)
+                    { 
+                        source: 'biz_reset', 
+                        condition: "checked === true", 
+                        action: 'clear', 
+                        target: 'biz_email, biz_phone, biz_name, biz_tax',
+                        confirm: "Все заполненные поля будут очищены. Продолжить?"
+                    },
+                    {
+                        // При очистке также блокируем поля, чтобы действие имело состояние
+                        source: 'biz_reset',
+                        condition: "checked === true",
+                        action: 'disable',
+                        inverse_action: 'enable',
+                        target: 'biz_email, biz_phone, biz_name, biz_tax'
+                    },
+                    {
+                        // Авто-сброс свитчера после очистки
+                        source: 'biz_reset',
+                        condition: "checked === true",
+                        action: 'uncheck',
+                        target: 'biz_reset'
+                    }                 
+                ]
+            });
+
+            // 1. Complex
+            window.kris1 = new KrisForm(document.getElementById('form-complex'), {
+                dependencies: [
+                    { source: "type", condition: "value === 'company'", action: "show", inverse_action: "hide", target: "tax" },
+                    { source: "type", condition: "value === 'company'", action: "required", inverse_action: "optional", target: "tax", message: "Для юр. лиц ИНН обязателен" }
+                ]
+            });
+
+            // 2. Modals
+            const confirmLogic = (src, target, msg) => [{
+                source: src, condition: "checked === true", action: "enable", inverse_action: "disable", target: target, confirm: msg
+            }];
+
+            // BS Instance
+            new KrisForm(document.getElementById('form-bs'), {
+                dependencies: confirmLogic("bs_sw", "bs_data", "Включить режим администратора?"),
+                modalId: 'modal-bs' // ID Bootstrap модалки
+            });
+
+            // Vanilla Instance
+            new KrisForm(document.getElementById('form-vanilla'), {
+                dependencies: confirmLogic("v_sw", "v_data", "Это действие необратимо. Продолжить?"),
+                modalId: 'modal-vanilla' // ID Ванильной модалки
+            });
+
+            // 3. I18n Demo
+            window.krisI18n = new KrisForm(document.getElementById('form-i18n'));
+
+            // 4. Custom Validator Demo
+            window.krisCustom = new KrisForm(document.getElementById('form-custom'));
+            window.krisCustom.validator.rules.magic_code = function(value, param) {
+                return value === param;
+            };
+            // Добавляем перевод ошибки для живого примера
+            window.KrisFormTranslateMessages.magic_code = "Неверный код. Ожидается: %s";
+
+            // Функция смены языка для демо
+            window.setLang = function (lang, btn) {
+                // UI
+                const btns = btn.parentElement.children;
+                for (let b of btns) b.classList.remove('active');
+                btn.classList.add('active');
+
+                // Логика перевода
+                const dict = {
+                    ru: {
+                        required: "Это поле обязательно",
+                        email: "Некорректный email",
+                        phone: "Некорректный номер телефона",
+                        numeric: "Только цифры",
+                        min: "Минимум: %s",
+                        len: "Длина должна быть ровно %s знаков" // Используется в примере №1
+                    },
+                    en: {
+                        required: "Field is required",
+                        email: "Invalid email format",
+                        numeric: "Digits only",
+                        min: "Minimum: %s",
+                        len: "Length must be exactly %s chars"
+                    },
+                    de: {
+                        required: "Dieses Feld ist erforderlich",
+                        email: "Ungültige E-Mail",
+                        numeric: "Nur Ziffern",
+                        min: "Minimum: %s",
+                        len: "Länge muss genau %s Zeichen sein"
+                    }
+                };
+
+                // Применяем глобально
+                window.KrisFormTranslateMessages = dict[lang];
+
+                // Перевалидируем форму, чтобы обновить сообщения сразу
+                window.krisI18n.validateAll();
+            };
+        });
+    </script>
+</body>
+
+</html>
