@@ -2,6 +2,8 @@
 
 **KrisForm** is a secure, high-performance, vanilla JavaScript library for form validation, complex dependency management, and state handling. It requires no external dependencies (like jQuery) and is designed to be easily integrated into any web project.
 
+[📘 **Detailed Documentation & Demo**](https://smalloff.github.io/KrisForm/)
+
 ## Features
 
 *   🚀 **Zero Dependencies**: Pure Vanilla JS.
