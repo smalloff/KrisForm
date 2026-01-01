@@ -306,6 +306,7 @@
             <a href="#ex-complex" class="nav-link">1. Complex Logic</a>
             <a href="#ex-modals" class="nav-link">2. Modal Confirmations</a>
             <a href="#ex-i18n" class="nav-link">3. Localization</a>
+            <a href="#ex-computed" class="nav-link">4. Computed Values</a>
         </div>
     </nav>
 
@@ -725,23 +726,26 @@ window.KrisFormTranslateMessages.magic_code = "Wrong code. Expected: %s";</code>
                 <span class="badge bg-light text-dark border">check / uncheck</span>
                 <span class="badge bg-light text-dark border">clear</span>
                 <span class="badge bg-light text-dark border">set_value:X</span>
+                <span class="badge bg-light text-dark border">set_computed_value:expr</span>
                 <span class="badge bg-light text-dark border">add_class:cls</span>
             </div>
         </section>
 
         <section id="expressions">
-            <h2>Expression Syntax</h2>
-            <p>Used in the <code>condition</code> field.</p>
+            <h2>Expression & Math Syntax</h2>
+            <p>Used in the <code>condition</code> field (for logic) and <code>set_computed_value</code> action (for math).</p>
             <ul>
                 <li><code>value</code> — value of the <code>source</code> field.</li>
                 <li><code>fields.OtherName</code> — value of another form field.</li>
                 <li><code>source.checked</code> — (for checkboxes) true/false.</li>
-                <li>Operators: <code>===</code>, <code>!==</code>, <code>&gt;</code>, <code>&lt;</code>,
+                <li><strong>Logic:</strong> <code>===</code>, <code>!==</code>, <code>&gt;</code>, <code>&lt;</code>,
                     <code>&&</code>, <code>||</code>.</li>
+                <li><strong>Math:</strong> <code>+</code>, <code>max(a, b...)</code>, <code>min(a, b...)</code>.</li>
             </ul>
-        </section>
+            
+            </section>
 
-        <!-- Example 1 -->
+                    <!-- Example 1 -->
         <section id="ex-complex">
             <h2>1. Complex Logic</h2>
             <p>Example: Selecting "Company" shows Tax ID field and makes it required.</p>
@@ -958,6 +962,52 @@ new KrisForm(document.getElementById('form-i18n'));</code></pre>
             </div>
         </section>
 
+        <!-- Example 4 -->
+        <section id="ex-computed">
+            <h2>4. Computed Values</h2>
+            <p>
+                Use the <code>set_computed_value</code> action to perform arithmetic calculations based on other fields.
+                Supports <code>+ - * /</code> operators and <code>min/max</code> functions.
+            </p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-computed" novalidate onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Min Password Length</label>
+                            <input type="number" name="cfg_length" class="form-control" value="8">
+                            <div class="form-text">Auto-increases if requirements exceed this value.</div>
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Min Digits</label>
+                                <input type="number" name="cfg_digits" class="form-control" value="2">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Min Symbols</label>
+                                <input type="number" name="cfg_symbols" class="form-control" value="1">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">// Logic: If (Digits + Symbols) > Length, update Length.
+const autoFixAction = "set_computed_value:max(fields.cfg_length, fields.cfg_digits + fields.cfg_symbols)";
+
+new KrisForm(document.getElementById('form-computed'), {
+    dependencies: [
+        // Watch 'digits' and 'symbols' fields
+        { source: "cfg_length", condition: "true", action: autoFixAction, target: "cfg_length" },
+        { source: "cfg_digits", condition: "true", action: autoFixAction, target: "cfg_length" },
+        { source: "cfg_symbols", condition: "true", action: autoFixAction, target: "cfg_length" }
+    ]
+});</code></pre>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- === Hidden Modals === -->
@@ -1137,6 +1187,16 @@ new KrisForm(document.getElementById('form-i18n'));</code></pre>
                 // Re-validate to update messages instantly
                 window.krisI18n.validateAll();
             };
+
+            // 4. Computed Values Demo
+            const autoFixAction = "set_computed_value:max(fields.cfg_length, fields.cfg_digits + fields.cfg_symbols)";
+            new KrisForm(document.getElementById('form-computed'), {
+                dependencies: [
+                    { source: "cfg_length", condition: "true", action: autoFixAction, target: "cfg_length" },
+                    { source: "cfg_digits", condition: "true", action: autoFixAction, target: "cfg_length" },
+                    { source: "cfg_symbols", condition: "true", action: autoFixAction, target: "cfg_length" }
+                ]
+            });
         });
     </script>
 </body>

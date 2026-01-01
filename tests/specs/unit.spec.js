@@ -81,28 +81,41 @@ describe('Evaluator (Security & Logic)', () => {
     it('SECURITY: should prevent prototype pollution access', () => {
         const ctx = { value: {} };
         // Trying to access constructor
-        expect(Eval.evaluate("value.constructor", {}, () => {}, () => {})).toBe(false); 
-        expect(Eval.evaluate("value.__proto__", {}, () => {}, () => {})).toBe(false);
+        // Evaluator returns null for invalid/blocked access
+        expect(Eval.evaluate("value.constructor", {}, () => {}, () => {})).toBe(null); 
+        expect(Eval.evaluate("value.__proto__", {}, () => {}, () => {})).toBe(null);
     });
 
     it('SECURITY: should fail on dangerous code execution', () => {
         // The parser expects specific operators, random JS shouldn't execute
-        // This is a smoke test for the parser structure
-        expect(Eval.evaluate("alert(1)", '', () => {}, () => {})).toBe(false);
-        expect(Eval.evaluate("window.location = 'bad'", '', () => {}, () => {})).toBe(false);
+        expect(Eval.evaluate("alert(1)", '', () => {}, () => {})).toBe(null);
+        expect(Eval.evaluate("window.location = 'bad'", '', () => {}, () => {})).toBe(null);
     });
 
     it('should handle operator precedence (AND > OR)', () => {
             // false && true || true
-            // If AND > OR: (false && true) || true -> false || true -> true
-            // If OR > AND: false && (true || true) -> false && true -> false
             expect(Eval.evaluate('false && true || true', null, () => {}, () => {})).toBe(true);
-
             // true || false && false
-            // If AND > OR: true || (false && false) -> true || false -> true
-            // If OR > AND: (true || false) && false -> true && false -> false
             expect(Eval.evaluate('true || false && false', null, () => {}, () => {})).toBe(true);
         });
+
+    it('should evaluate arithmetic expressions', () => {
+        // Simple Addition
+        expect(Eval.evaluate('10 + 20', null, () => {}, () => {})).toBe(30);
+        
+        // With Context Resolution (simulated via internal method)
+        // Evaluator.evaluate() wraps context in {value: ...}, so we use _evaluateRecursive directly for testing custom context
+        const ctx = { a: 5, b: 10 };
+        expect(Eval._evaluateRecursive('a + b + 5', ctx, () => {})).toBe(20);
+    });
+
+    it('should evaluate math functions (max/min)', () => {
+        expect(Eval.evaluate('max(10, 20, 5)', null, () => {}, () => {})).toBe(20);
+        expect(Eval.evaluate('min(10, 20, 5)', null, () => {}, () => {})).toBe(5);
+        
+        // Nested logic inside functions
+        expect(Eval.evaluate('max(10, 5 + 25)', null, () => {}, () => {})).toBe(30);
+    });
 });
 
 describe('Validator Advanced Patterns', () => {

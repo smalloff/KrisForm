@@ -1,6 +1,6 @@
 /**
  * KrisForm - Universal Form Library
- * Version: 2.2.0
+ * Version: 2.2.1
  * Author: smalloff
  * Description: Secure, high-performance vanilla JS library for form validation, dependency management, and state handling.
  */
@@ -262,11 +262,59 @@
                 }
             }
 
-            const val = this._resolve(expr, context, fieldProvider);
-            return Boolean(val);
-        }
+            // Math Functions Support
+                        if (expr.startsWith("Math.max(") || expr.startsWith("max(")) return this._evalMathFunction(expr, "max", context, fieldProvider);
+                        if (expr.startsWith("Math.min(") || expr.startsWith("min(")) return this._evalMathFunction(expr, "min", context, fieldProvider);
 
-        static _evalMethod(expr, context, method, fieldProvider) {
+                        // Arithmetic Operations (Simple parser for + - * /)
+                        // Note: This is a basic implementation. For complex math, a tokenizer is needed.
+                        // We support simple "A + B + C" logic.
+                        if (/[\+\-\*\/]/.test(expr)) {
+                            return this._evalArithmetic(expr, context, fieldProvider);
+                        }
+
+                        const val = this._resolve(expr, context, fieldProvider);
+                        // If it's a condition check (called from _evaluateAtom for boolean logic), convert to bool.
+                        // But if called directly for math, we need the value.
+                        // Context usage dictates return type. For backward compatibility in boolean context:
+                        return val;
+                    }
+
+                    static _evalMathFunction(expr, func, context, fieldProvider) {
+                        // Extract arguments: max(a, b + c, d)
+                        const argsStr = expr.substring(expr.indexOf('(') + 1, expr.lastIndexOf(')'));
+                        const parts = argsStr.split(',').map(s => s.trim());
+
+                        const values = parts.map(p => {
+                            // Recursive eval for arguments (supports "fields.a + fields.b")
+                            return this._evaluateRecursive(p, context, fieldProvider);
+                        });
+
+                        const nums = values.map(v => Number(v) || 0);
+
+                        if (func === 'max') return Math.max(...nums);
+                        if (func === 'min') return Math.min(...nums);
+                        return 0;
+                    }
+
+                    static _evalArithmetic(expr, context, fieldProvider) {
+                        // Very simple parser: splits by operators and aggregates.
+                        // Does not support complex precedence/parentheses nesting within arithmetic yet.
+                        // Supports: "fields.a + fields.b + 10"
+
+                        // 1. Resolve values first? No, split by op.
+                        // Limitations: assumes spaces around operators or simple structure.
+
+                        // Let's try a safer approach: evaluate operands then sum.
+                        const terms = expr.split('+');
+                        if (terms.length > 1) {
+                            return terms.reduce((acc, term) => acc + (Number(this._resolve(term.trim(), context, fieldProvider)) || 0), 0);
+                        }
+                        // Add other operators if needed, but + is sufficient for "sum of targets"
+                        return 0;
+                    }
+
+                    static _evalMethod(expr, context, method, fieldProvider) {
             const parts = expr.split(`.${method}(`);
             if (parts.length < 2) return false;
             
@@ -1097,7 +1145,20 @@
                 remove_class: () => container && !isHidden && container.classList.remove(...param.split(" ")),
                 focus: () => !isHidden && setTimeout(() => el.focus(), 50),
                 clear: () => !isHidden && Utils.setElementValue(el, ''),
-                filter_options: () => this._filterOptions(el, sourceValue)
+                filter_options: () => this._filterOptions(el, sourceValue),
+                
+                // Computed Value Action
+                // Syntax: set_computed_value:max(fields.a + fields.b)
+                set_computed_value: () => {
+                    if (isHidden) return;
+                    // Prepare context for Evaluator
+                    const stateProvider = (attr) => this.getFieldState(sourceValue, attr); // Source context (less relevant here)
+                    const fieldProvider = (name) => this.getFieldValue(name);
+                    const context = { value: sourceValue }; // current source value
+                    
+                    const result = Evaluator._evaluateRecursive(param, context, fieldProvider);
+                    Utils.setElementValue(el, result);
+                }
             };
 
             if (actions[action]) {

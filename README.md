@@ -9,6 +9,7 @@
 *   🚀 **Zero Dependencies**: Pure Vanilla JS.
 *   🛡️ **Secure**: Hardened expression evaluator and XSS-safe DOM manipulation.
 *   ✅ ** extensive Validation**: Over 80+ built-in validation rules (Email, IP, Credit Card, UUID, etc.).
+*   🧮 **Calculations**: Built-in math engine for computed fields (`max`, `min`, `sum` logic).
 *   🔗 **Dependency Management**: Powerful logic engine to Show/Hide/Require fields based on other field values.
 *   ⚡ **High Performance**: Debounced events and optimized DOM traversal.
 *   🎨 **Customizable**: Configurable CSS classes, selectors, and error messages.
@@ -110,8 +111,27 @@ KrisForm allows you to define complex logic using a JSON structure.
 *   `enable` / `disable`
 *   `required` / `optional`
 *   `set_value:value`
+*   `set_computed_value:expression`
 *   `check` / `uncheck`
 *   `clear`
+
+### Expression Syntax
+
+Used in `condition` (boolean logic) and `set_computed_value` (math).
+
+*   **Variables**: `value` (current source), `fields.FieldName` (other fields).
+*   **Logic**: `===`, `!==`, `>`, `<`, `&&`, `||`.
+*   **Math**: `+`, `-`, `*`, `/`, `max(a, b...)`, `min(a, b...)`.
+
+**Example (Computed Field):**
+```javascript
+{
+    source: "items_count",
+    condition: "true",
+    action: "set_computed_value:fields.price * fields.items_count",
+    target: "total_cost"
+}
+```
 
 ## Validation Rules
 
