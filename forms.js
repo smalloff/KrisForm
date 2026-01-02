@@ -506,6 +506,7 @@
 
                 // --- Complexity (Count Matches) ---
                 min_alpha: (val, p) => (String(val).match(/[a-zA-Z]/g) || []).length >= Number(p),
+                min_lower: (val, p) => (String(val).match(/[a-z]/g) || []).length >= Number(p),
                 min_upper: (val, p) => (String(val).match(/[A-Z]/g) || []).length >= Number(p),
                 min_digit: (val, p) => (String(val).match(/[0-9]/g) || []).length >= Number(p),
                 min_symbol: (val, p) => (String(val).match(/[^a-zA-Z0-9\s]/g) || []).length >= Number(p),

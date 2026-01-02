@@ -187,6 +187,7 @@ KrisForm comes with a massive list of built-in validators. You can chain them us
 | `oneof` | `a,b,c` | Must be one of the listed values. |
 | `neof` | `a,b,c` | Must NOT be one of the listed values. |
 | `min_alpha` | `count` | Minimum count of alphabetic chars. |
+| `min_lower` | `count` | Minimum count of lowercase chars. |
 | `min_upper` | `count` | Minimum count of uppercase chars. |
 | `min_digit` | `count` | Minimum count of digits. |
 | `min_symbol` | `count` | Minimum count of special symbols. |
