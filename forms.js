@@ -501,8 +501,8 @@
                 
                 // --- Numeric / Range / Length ---
                 len: (val, p) => String(val).length === Number(p),
-                min: (val, p, el) => el.type === 'number' ? Number(val) >= Number(p) : String(val).length >= Number(p),
-                max: (val, p, el) => el.type === 'number' ? Number(val) <= Number(p) : String(val).length <= Number(p),
+                min: (val, p, el) => (el.type === 'number' || el.type === 'range') ? Number(val) >= Number(p) : String(val).length >= Number(p),
+                max: (val, p, el) => (el.type === 'number' || el.type === 'range') ? Number(val) <= Number(p) : String(val).length <= Number(p),
 
                 // --- Complexity (Count Matches) ---
                 min_alpha: (val, p) => (String(val).match(/[a-zA-Z]/g) || []).length >= Number(p),
