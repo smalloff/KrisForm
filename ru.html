@@ -1089,6 +1089,15 @@ new KrisForm(document.getElementById('form-computed'), {
                             <strong>Для <code>&lt;input&gt;</code></strong>: Ожидается одиночное значение (Строка/Число) или объект с полем <code>value</code>.
                         </li>
                     </ul>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="fw-bold mb-2">Восстановление сохраненных значений</h6>
+                        <p class="mb-3">
+                            При динамической загрузке через AJAX поле изначально пустое. Чтобы автоматически выбрать сохраненное значение после загрузки данных, добавьте атрибут <code>data-value</code> в HTML:
+                        </p>
+                        <pre class="m-0"><code class="language-html">&lt;!-- Библиотека выберет 'msk', как только данные загрузятся --&gt;
+&lt;select name="city" data-value="msk"&gt;&lt;/select&gt;</code></pre>
+                    </div>
                 </div>
             </div>
         </section>

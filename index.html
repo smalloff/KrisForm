@@ -1090,6 +1090,15 @@ new KrisForm(document.getElementById('form-computed'), {
                             <strong>For <code>&lt;input&gt;</code></strong>: Expects a single value (String/Number) or an Object with a <code>value</code> property.
                         </li>
                     </ul>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="fw-bold mb-2">Restoring Saved Values</h6>
+                        <p class="mb-3">
+                            When loading data dynamically via AJAX, the target field is initially empty. To automatically select a saved value after loading, add the <code>data-value</code> attribute to your HTML:
+                        </p>
+                        <pre class="m-0"><code class="language-html">&lt;!-- The library will select 'option_b' once data arrives --&gt;
+&lt;select name="city" data-value="option_b"&gt;&lt;/select&gt;</code></pre>
+                    </div>
                 </div>
             </div>
         </section>

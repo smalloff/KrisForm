@@ -222,9 +222,9 @@
             }
 
             return this._evaluateAtom(expr, context, fieldProvider);
-                    }
+        }
 
-                    static _findSplitIndex(text, sep) {
+        static _findSplitIndex(text, sep) {
             let depth = 0;
             const sepLen = sep.length;
             for (let i = 0; i < text.length; i++) {
@@ -264,58 +264,45 @@
             }
 
             // Math Functions Support
-                        if (expr.startsWith("Math.max(") || expr.startsWith("max(")) return this._evalMathFunction(expr, "max", context, fieldProvider);
-                        if (expr.startsWith("Math.min(") || expr.startsWith("min(")) return this._evalMathFunction(expr, "min", context, fieldProvider);
+            if (expr.startsWith("Math.max(") || expr.startsWith("max(")) return this._evalMathFunction(expr, "max", context, fieldProvider);
+            if (expr.startsWith("Math.min(") || expr.startsWith("min(")) return this._evalMathFunction(expr, "min", context, fieldProvider);
 
-                        // Arithmetic Operations (Simple parser for + - * /)
-                        // Note: This is a basic implementation. For complex math, a tokenizer is needed.
-                        // We support simple "A + B + C" logic.
-                        if (/[\+\-\*\/]/.test(expr)) {
-                            return this._evalArithmetic(expr, context, fieldProvider);
-                        }
+            // Arithmetic Operations (Simple parser for + - * /)
+            if (/[\+\-\*\/]/.test(expr)) {
+                return this._evalArithmetic(expr, context, fieldProvider);
+            }
 
-                        const val = this._resolve(expr, context, fieldProvider);
-                        // If it's a condition check (called from _evaluateAtom for boolean logic), convert to bool.
-                        // But if called directly for math, we need the value.
-                        // Context usage dictates return type. For backward compatibility in boolean context:
-                        return val;
-                    }
+            const val = this._resolve(expr, context, fieldProvider);
+            return val;
+        }
 
-                    static _evalMathFunction(expr, func, context, fieldProvider) {
-                        // Extract arguments: max(a, b + c, d)
-                        const argsStr = expr.substring(expr.indexOf('(') + 1, expr.lastIndexOf(')'));
-                        const parts = argsStr.split(',').map(s => s.trim());
+        static _evalMathFunction(expr, func, context, fieldProvider) {
+            // Extract arguments: max(a, b + c, d)
+            const argsStr = expr.substring(expr.indexOf('(') + 1, expr.lastIndexOf(')'));
+            const parts = argsStr.split(',').map(s => s.trim());
 
-                        const values = parts.map(p => {
-                            // Recursive eval for arguments (supports "fields.a + fields.b")
-                            return this._evaluateRecursive(p, context, fieldProvider);
-                        });
+            const values = parts.map(p => {
+                // Recursive eval for arguments (supports "fields.a + fields.b")
+                return this._evaluateRecursive(p, context, fieldProvider);
+            });
 
-                        const nums = values.map(v => Number(v) || 0);
+            const nums = values.map(v => Number(v) || 0);
 
-                        if (func === 'max') return Math.max(...nums);
-                        if (func === 'min') return Math.min(...nums);
-                        return 0;
-                    }
+            if (func === 'max') return Math.max(...nums);
+            if (func === 'min') return Math.min(...nums);
+            return 0;
+        }
 
-                    static _evalArithmetic(expr, context, fieldProvider) {
-                        // Very simple parser: splits by operators and aggregates.
-                        // Does not support complex precedence/parentheses nesting within arithmetic yet.
-                        // Supports: "fields.a + fields.b + 10"
+        static _evalArithmetic(expr, context, fieldProvider) {
+            // Very simple parser: splits by operators and aggregates.
+            const terms = expr.split('+');
+            if (terms.length > 1) {
+                return terms.reduce((acc, term) => acc + (Number(this._resolve(term.trim(), context, fieldProvider)) || 0), 0);
+            }
+            return 0;
+        }
 
-                        // 1. Resolve values first? No, split by op.
-                        // Limitations: assumes spaces around operators or simple structure.
-
-                        // Let's try a safer approach: evaluate operands then sum.
-                        const terms = expr.split('+');
-                        if (terms.length > 1) {
-                            return terms.reduce((acc, term) => acc + (Number(this._resolve(term.trim(), context, fieldProvider)) || 0), 0);
-                        }
-                        // Add other operators if needed, but + is sufficient for "sum of targets"
-                        return 0;
-                    }
-
-                    static _evalMethod(expr, context, method, fieldProvider) {
+        static _evalMethod(expr, context, method, fieldProvider) {
             const parts = expr.split(`.${method}(`);
             if (parts.length < 2) return false;
             
@@ -361,7 +348,6 @@
 
             // Dynamic Fields
             if (expr.startsWith("fields.")) {
-                // Trim the key to ensure no trailing spaces "fields.a "
                 return fieldProvider ? fieldProvider(expr.slice(7).trim()) : null;
             }
             if (expr.startsWith("source.")) {
@@ -385,8 +371,6 @@
                     return v;
                 }
             }
-            // Strict mode: If not a literal or known variable, return null.
-            // Returning 'expr' caused security issues where "alert(1)" became true (non-empty string).
             return null;
         }
     }
@@ -1119,7 +1103,7 @@
 
                             // Data Loading Logic
                             if (isMet && dep['data-url']) {
-                                this._loadDependencyData(dep['data-url'], el, val);
+                                this._loadDependencyData(dep['data-url'], el, val, isInit);
                             }
                         });
                     });
@@ -1130,15 +1114,10 @@
         /**
          * Fetches data from endpoint and populates target
          */
-        _loadDependencyData(urlPath, targetEl, sourceValue) {
+        _loadDependencyData(urlPath, targetEl, sourceValue, isInit = false) {
             // Prevent spamming requests for the same value
             const cacheKey = `${urlPath}:${sourceValue}`;
             if (targetEl._lastLoadedValue === cacheKey) return;
-
-            // FIX 1: Deduplication. Prevent triggering duplicate request for the same key 
-            // (e.g. simultaneous 'input' and 'change' events)
-            if (targetEl._krisPendingKey === cacheKey) return;
-            targetEl._krisPendingKey = cacheKey;
 
             let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
             const encodedVal = encodeURIComponent(sourceValue);
@@ -1151,18 +1130,23 @@
                 url += `${separator}value=${encodedVal}`;
             }
 
-            // FIX 2: Ref Counting for Styles.
-            // Initialize counter if it doesn't exist
-            targetEl._krisLoadCount = (targetEl._krisLoadCount || 0) + 1;
+            // Init request counter if not exists
+            if (typeof targetEl._krisReqCount === 'undefined') {
+                targetEl._krisReqCount = 0;
+            }
 
-            // Only capture original state on the FIRST active request to avoid capturing '0.5'
-            if (targetEl._krisLoadCount === 1) {
+            // Capture original state ONLY on the first request
+            if (targetEl._krisReqCount === 0) {
                 targetEl._krisOrigOpacity = targetEl.style.opacity;
                 targetEl._krisOrigPointer = targetEl.style.pointerEvents;
                 
+                // Apply loading state
                 targetEl.style.opacity = '0.5';
                 targetEl.style.pointerEvents = 'none';
             }
+
+            // Increment active requests
+            targetEl._krisReqCount++;
 
             fetch(url)
                 .then(response => {
@@ -1170,34 +1154,29 @@
                     return response.json();
                 })
                 .then(data => {
-                    this._populateTarget(targetEl, data);
+                    this._populateTarget(targetEl, data, isInit);
                     targetEl._lastLoadedValue = cacheKey;
                 })
                 .catch(error => {
                     console.warn("[KrisForm] Data load failed:", error);
                 })
                 .finally(() => {
-                    // Clear pending key so retry is possible if needed later
-                    if (targetEl._krisPendingKey === cacheKey) {
-                        delete targetEl._krisPendingKey;
-                    }
-
-                    targetEl._krisLoadCount--;
+                    targetEl._krisReqCount--;
                     
                     // Only restore state when ALL active requests are finished
-                    if (targetEl._krisLoadCount <= 0) {
-                        targetEl._krisLoadCount = 0; // Safety reset
+                    if (targetEl._krisReqCount <= 0) {
+                        targetEl._krisReqCount = 0; // Reset to be safe
                         targetEl.style.opacity = targetEl._krisOrigOpacity;
                         targetEl.style.pointerEvents = targetEl._krisOrigPointer;
                         
-                        // Cleanup temporary properties
+                        // Cleanup temp properties
                         delete targetEl._krisOrigOpacity;
                         delete targetEl._krisOrigPointer;
                     }
                 });
         }
 
-        _populateTarget(el, data) {
+        _populateTarget(el, data, isInit = false) {
             if (el.tagName === 'SELECT') {
                 // Clear existing options (except placeholder if any?) 
                 // Strategy: If first option has empty value, keep it as placeholder.
@@ -1222,6 +1201,14 @@
                         }
                         el.appendChild(opt);
                     });
+                }
+
+                // Restore saved value on initialization (via data-value attribute)
+                if (isInit) {
+                    const savedVal = el.getAttribute('data-value');
+                    if (savedVal) {
+                        Utils.setElementValue(el, savedVal);
+                    }
                 }
             } else if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 // For inputs, just set the value (assuming API returns a single value string/number or object with value)
