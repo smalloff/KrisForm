@@ -307,6 +307,7 @@
             <a href="#ex-modals" class="nav-link">2. Modal Confirmations</a>
             <a href="#ex-i18n" class="nav-link">3. Localization</a>
             <a href="#ex-computed" class="nav-link">4. Computed Values</a>
+            <a href="#ex-data" class="nav-link">5. Dynamic Data (AJAX)</a>
         </div>
     </nav>
 
@@ -1012,6 +1013,83 @@ new KrisForm(document.getElementById('form-computed'), {
             </div>
         </section>
 
+        <!-- Example 5: Dynamic Data -->
+        <section id="ex-data">
+            <h2>5. Dynamic Data Loading (AJAX)</h2>
+            <p>
+                KrisForm can automatically fetch data from an API and populate a field (Select/Input) when conditions are met.
+                <br>Use the <code>data-url</code> property. The <code>{value}</code> placeholder is replaced by the source field's value.
+            </p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-data" novalidate onsubmit="return false;">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Select User ID</label>
+                                <select name="user_id" class="form-select">
+                                    <option value="">-- Choose --</option>
+                                    <option value="1">User 1</option>
+                                    <option value="2">User 2</option>
+                                    <option value="3">User 3</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">User Albums (Loaded via API)</label>
+                                <select name="albums" class="form-select" disabled>
+                                    <option value="">-- Albums will appear here --</option>
+                                </select>
+                                <div class="form-text">Data source: jsonplaceholder.typicode.com</div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">new KrisForm(document.getElementById('form-data'), {
+    // 1. Set Base URL
+    endpoint: "https://jsonplaceholder.typicode.com/",
+    
+    dependencies: [
+        {
+            source: "user_id",
+            // 2. Condition: When user is selected
+            condition: "value !== ''",
+            
+            // 3. Action: Enable field and Load Data
+            action: "enable",
+            inverse_action: "disable",
+            target: "albums",
+            
+            // 4. Data URL (Relative to endpoint). {value} is replaced by selected User ID.
+            // Result: https://jsonplaceholder.typicode.com/albums?userId=1
+            "data-url": "albums?userId={value}" 
+        }
+    ]
+});</code></pre>
+                </div>
+
+                <div class="ex-view border-top">
+                    <h5 class="mb-3 fw-bold">Expected Backend Response Format</h5>
+                    <p class="mb-3 text-muted">The library automatically parses JSON based on the target element type:</p>
+                    
+                    <ul class="list-group list-group-flush border rounded">
+                        <li class="list-group-item">
+                            <strong>For <code>&lt;select&gt;</code></strong>: Expects an Array of Objects.
+                            <ul class="mt-2 mb-2">
+                                <li><strong>Value:</strong> Uses <code>value</code> or <code>id</code> property.</li>
+                                <li><strong>Label:</strong> Uses <code>label</code>, <code>name</code>, <code>title</code>, or <code>value</code> property.</li>
+                            </ul>
+                            <span class="text-muted small">Example: <code>[{"id": 1, "name": "Option A"}, {"value": "b", "label": "Option B"}]</code></span>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>For <code>&lt;input&gt;</code></strong>: Expects a single value (String/Number) or an Object with a <code>value</code> property.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- === Hidden Modals === -->
@@ -1199,6 +1277,21 @@ new KrisForm(document.getElementById('form-computed'), {
                     { source: "cfg_length", condition: "true", action: autoFixAction, target: "cfg_length" },
                     { source: "cfg_digits", condition: "true", action: autoFixAction, target: "cfg_length" },
                     { source: "cfg_symbols", condition: "true", action: autoFixAction, target: "cfg_length" }
+                ]
+            });
+
+            // 5. Dynamic Data Demo
+            new KrisForm(document.getElementById('form-data'), {
+                endpoint: "https://jsonplaceholder.typicode.com/",
+                dependencies: [
+                    {
+                        source: "user_id",
+                        condition: "value !== ''",
+                        action: "enable",
+                        inverse_action: "disable",
+                        target: "albums",
+                        "data-url": "albums?userId={value}"
+                    }
                 ]
             });
         });

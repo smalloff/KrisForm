@@ -1,6 +1,6 @@
 /**
  * KrisForm - Universal Form Library
- * Version: 2.2.1
+ * Version: 2.2.2
  * Author: smalloff
  * Description: Secure, high-performance vanilla JS library for form validation, dependency management, and state handling.
  */
@@ -22,6 +22,7 @@
 
     const DEFAULTS = {
         updateDelay: 10, // ms, debouncing time
+        endpoint: "", // Base URL for data-url requests
         selectors: {
             // Priority: data-attribute -> id-pattern -> class
             fieldContainers: ["[data-field-container]", "[id^='container_']", ".field-container"],
@@ -1115,10 +1116,96 @@
                             if (dep.message) {
                                 this._updateStatusMessage(container, dep.message, isMet);
                             }
+
+                            // Data Loading Logic
+                            if (isMet && dep['data-url']) {
+                                this._loadDependencyData(dep['data-url'], el, val);
+                            }
                         });
                     });
                 }
             });
+        }
+
+        /**
+         * Fetches data from endpoint and populates target
+         */
+        _loadDependencyData(urlPath, targetEl, sourceValue) {
+            // Prevent spamming requests for the same value
+            const cacheKey = `${urlPath}:${sourceValue}`;
+            if (targetEl._lastLoadedValue === cacheKey) return;
+
+            let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
+            const encodedVal = encodeURIComponent(sourceValue);
+
+            // Support {value} placeholder or append as query param
+            if (url.includes('{value}')) {
+                url = url.replace('{value}', encodedVal);
+            } else {
+                const separator = url.includes('?') ? '&' : '?';
+                url += `${separator}value=${encodedVal}`;
+            }
+
+            // Visual feedback (loading state)
+            const originalOpacity = targetEl.style.opacity;
+            targetEl.style.opacity = '0.5';
+            targetEl.style.pointerEvents = 'none';
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) throw new Error("Network response was not ok");
+                    return response.json();
+                })
+                .then(data => {
+                    this._populateTarget(targetEl, data);
+                    targetEl._lastLoadedValue = cacheKey;
+                })
+                .catch(error => {
+                    console.warn("[KrisForm] Data load failed:", error);
+                })
+                .finally(() => {
+                    targetEl.style.opacity = originalOpacity;
+                    targetEl.style.pointerEvents = '';
+                });
+        }
+
+        _populateTarget(el, data) {
+            if (el.tagName === 'SELECT') {
+                // Clear existing options (except placeholder if any?) 
+                // Strategy: If first option has empty value, keep it as placeholder.
+                let placeholder = null;
+                if (el.options.length > 0 && el.options[0].value === "") {
+                    placeholder = el.options[0].cloneNode(true);
+                }
+
+                el.innerHTML = '';
+                if (placeholder) el.appendChild(placeholder);
+
+                if (Array.isArray(data)) {
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        // Support both simple array [val1, val2] and object array [{value, label}]
+                        if (typeof item === 'object' && item !== null) {
+                            opt.value = item.value !== undefined ? item.value : item.id;
+                            opt.textContent = item.label || item.name || item.title || item.value;
+                        } else {
+                            opt.value = item;
+                            opt.textContent = item;
+                        }
+                        el.appendChild(opt);
+                    });
+                }
+            } else if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                // For inputs, just set the value (assuming API returns a single value string/number or object with value)
+                let val = data;
+                if (typeof data === 'object' && data !== null && data.value !== undefined) {
+                    val = data.value;
+                }
+                Utils.setElementValue(el, val);
+            }
+            
+            // Trigger change to propagate updates
+            el.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
         updateAllDependencies(isInit = false) {

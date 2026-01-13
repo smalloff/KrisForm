@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const krisForm = new KrisForm(formElement, {
         // Optional Configuration
         updateDelay: 100,
+        endpoint: "https://api.example.com/", // Base URL for data loading
         classes: {
             invalid: ['is-invalid', 'border-danger']
         },
@@ -132,6 +133,32 @@ Used in `condition` (boolean logic) and `set_computed_value` (math).
     target: "total_cost"
 }
 ```
+
+### Dynamic Data Loading (AJAX)
+
+KrisForm can fetching data from an API and populate a field (Select/Input) when conditions are met.
+
+**Configuration:**
+1.  Set `endpoint` in the initialization options (base URL).
+2.  Use `data-url` property in dependency rule.
+3.  Use `{value}` placeholder to inject the source field value.
+
+```javascript
+{
+    source: "user_id",
+    condition: "value !== ''",
+    target: "albums_select",
+    
+    // Result: https://api.example.com/albums?userId=5
+    "data-url": "albums?userId={value}"
+}
+```
+
+**Backend Response Format:**
+*   **For `<select>`**: Array of objects `[{ "value": 1, "label": "Item A" }]` or primitives `["A", "B"]`.
+    *   *Value keys:* `value`, `id`.
+    *   *Label keys:* `label`, `name`, `title`, `value`.
+*   **For `<input>`**: Single value (String/Number) or object `{ "value": "result" }`.
 
 ## Validation Rules
 

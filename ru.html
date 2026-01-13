@@ -307,6 +307,7 @@
             <a href="#ex-modals" class="nav-link">2. Модальные окна</a>
             <a href="#ex-i18n" class="nav-link">3. Локализация</a>
             <a href="#ex-computed" class="nav-link">4. Вычисляемые значения</a>
+            <a href="#ex-data" class="nav-link">5. Динамические данные (AJAX)</a>
         </div>
     </nav>
 
@@ -1011,6 +1012,83 @@ new KrisForm(document.getElementById('form-computed'), {
             </div>
         </section>
 
+        <!-- Пример 5: Динамические данные -->
+        <section id="ex-data">
+            <h2>5. Динамическая загрузка (AJAX)</h2>
+            <p>
+                KrisForm может автоматически загружать данные из API и заполнять поле (Select/Input) при выполнении условий.
+                <br>Используйте свойство <code>data-url</code>. Плейсхолдер <code>{value}</code> заменяется значением поля-источника.
+            </p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-data" novalidate onsubmit="return false;">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Выберите User ID</label>
+                                <select name="user_id" class="form-select">
+                                    <option value="">-- Выбор --</option>
+                                    <option value="1">User 1</option>
+                                    <option value="2">User 2</option>
+                                    <option value="3">User 3</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">Альбомы пользователя (API)</label>
+                                <select name="albums" class="form-select" disabled>
+                                    <option value="">-- Альбомы появятся здесь --</option>
+                                </select>
+                                <div class="form-text">Источник: jsonplaceholder.typicode.com</div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">new KrisForm(document.getElementById('form-data'), {
+    // 1. Базовый URL
+    endpoint: "https://jsonplaceholder.typicode.com/",
+    
+    dependencies: [
+        {
+            source: "user_id",
+            // 2. Условие: Пользователь выбран
+            condition: "value !== ''",
+            
+            // 3. Действие: Включить поле и загрузить данные
+            action: "enable",
+            inverse_action: "disable",
+            target: "albums",
+            
+            // 4. URL данных (относительно endpoint). {value} заменяется на ID юзера.
+            // Итог: https://jsonplaceholder.typicode.com/albums?userId=1
+            "data-url": "albums?userId={value}" 
+        }
+    ]
+});</code></pre>
+                </div>
+
+                <div class="ex-view border-top">
+                    <h5 class="mb-3 fw-bold">Формат ответа Бэкенда</h5>
+                    <p class="mb-3 text-muted">Библиотека автоматически разбирает JSON в зависимости от типа целевого поля:</p>
+                    
+                    <ul class="list-group list-group-flush border rounded">
+                        <li class="list-group-item">
+                            <strong>Для <code>&lt;select&gt;</code></strong>: Ожидается массив объектов.
+                            <ul class="mt-2 mb-2">
+                                <li><strong>Значение (Value):</strong> Берется из поля <code>value</code> или <code>id</code>.</li>
+                                <li><strong>Текст (Label):</strong> Берется из поля <code>label</code>, <code>name</code>, <code>title</code> или <code>value</code>.</li>
+                            </ul>
+                            <span class="text-muted small">Пример: <code>[{"id": 1, "name": "Опция А"}, {"value": "b", "label": "Опция Б"}]</code></span>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Для <code>&lt;input&gt;</code></strong>: Ожидается одиночное значение (Строка/Число) или объект с полем <code>value</code>.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- === Hidden Modals === -->
@@ -1198,6 +1276,21 @@ new KrisForm(document.getElementById('form-computed'), {
                     { source: "cfg_length", condition: "true", action: autoFixAction, target: "cfg_length" },
                     { source: "cfg_digits", condition: "true", action: autoFixAction, target: "cfg_length" },
                     { source: "cfg_symbols", condition: "true", action: autoFixAction, target: "cfg_length" }
+                ]
+            });
+
+            // 5. Динамические данные (Демо)
+            new KrisForm(document.getElementById('form-data'), {
+                endpoint: "https://jsonplaceholder.typicode.com/",
+                dependencies: [
+                    {
+                        source: "user_id",
+                        condition: "value !== ''",
+                        action: "enable",
+                        inverse_action: "disable",
+                        target: "albums",
+                        "data-url": "albums?userId={value}"
+                    }
                 ]
             });
         });
