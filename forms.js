@@ -1135,6 +1135,11 @@
             const cacheKey = `${urlPath}:${sourceValue}`;
             if (targetEl._lastLoadedValue === cacheKey) return;
 
+            // FIX 1: Deduplication. Prevent triggering duplicate request for the same key 
+            // (e.g. simultaneous 'input' and 'change' events)
+            if (targetEl._krisPendingKey === cacheKey) return;
+            targetEl._krisPendingKey = cacheKey;
+
             let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
             const encodedVal = encodeURIComponent(sourceValue);
 
@@ -1146,10 +1151,18 @@
                 url += `${separator}value=${encodedVal}`;
             }
 
-            // Visual feedback (loading state)
-            const originalOpacity = targetEl.style.opacity;
-            targetEl.style.opacity = '0.5';
-            targetEl.style.pointerEvents = 'none';
+            // FIX 2: Ref Counting for Styles.
+            // Initialize counter if it doesn't exist
+            targetEl._krisLoadCount = (targetEl._krisLoadCount || 0) + 1;
+
+            // Only capture original state on the FIRST active request to avoid capturing '0.5'
+            if (targetEl._krisLoadCount === 1) {
+                targetEl._krisOrigOpacity = targetEl.style.opacity;
+                targetEl._krisOrigPointer = targetEl.style.pointerEvents;
+                
+                targetEl.style.opacity = '0.5';
+                targetEl.style.pointerEvents = 'none';
+            }
 
             fetch(url)
                 .then(response => {
@@ -1164,8 +1177,23 @@
                     console.warn("[KrisForm] Data load failed:", error);
                 })
                 .finally(() => {
-                    targetEl.style.opacity = originalOpacity;
-                    targetEl.style.pointerEvents = '';
+                    // Clear pending key so retry is possible if needed later
+                    if (targetEl._krisPendingKey === cacheKey) {
+                        delete targetEl._krisPendingKey;
+                    }
+
+                    targetEl._krisLoadCount--;
+                    
+                    // Only restore state when ALL active requests are finished
+                    if (targetEl._krisLoadCount <= 0) {
+                        targetEl._krisLoadCount = 0; // Safety reset
+                        targetEl.style.opacity = targetEl._krisOrigOpacity;
+                        targetEl.style.pointerEvents = targetEl._krisOrigPointer;
+                        
+                        // Cleanup temporary properties
+                        delete targetEl._krisOrigOpacity;
+                        delete targetEl._krisOrigPointer;
+                    }
                 });
         }
 
