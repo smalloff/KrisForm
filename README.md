@@ -106,6 +106,9 @@ KrisForm allows you to define complex logic using a JSON structure.
 | `target` | The `name` (or selector) of the field(s) to modify. |
 | `action` | What to do if condition is **True**. |
 | `inverse_action` | (Optional) What to do if condition is **False**. |
+| `data-url` | (Optional) API endpoint to fetch data from. Supports `{value}` placeholder. |
+| `message` | (Optional) Message text (HTML allowed) to display near the target. |
+| `confirm` | (Optional) Text for a confirmation modal dialog before applying the action. |
 
 **Supported Actions:**
 *   `show` / `hide`
