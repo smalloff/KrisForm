@@ -39,12 +39,10 @@
             invalid: ["is-invalid"],
             valid: ["is-valid"]
         },
-        modalId: 'dependencyConfirmModal', // Configurable Modal ID
+        validationMode: 'lazy', // Options: 'immediate', 'delayed', 'blur', 'lazy'
+        validationDelay: 300, // Debounce delay in ms
         i18n: {
-            defaultError: "Validation failed",
-            confirmTitle: "Confirm Action",
-            confirm: "Confirm",
-            cancel: "Cancel"
+            defaultError: "Validation failed"
         }
     };
 
@@ -671,7 +669,6 @@
             };
 
             this.dependencyMap = new Map();
-            this.modal = null;
 
             // Bind methods for Event Listeners to allow removal later
             this._handleInput = this._handleInput.bind(this);
@@ -696,7 +693,6 @@
         }
 
         init() {
-            this._initModal();
             this._groupDependencies();
             this._snapshotState();
             this._bindEvents();
@@ -717,49 +713,6 @@
             this.state.initialValues.clear();
             this.state.lastCommittedValues.clear();
             this.dependencyMap.clear();
-            
-            if (this.modal && typeof this.modal.dispose === 'function') {
-                this.modal.dispose();
-            }
-        }
-
-        _initModal() {
-            const modalId = this.config.modalId || 'dependencyConfirmModal';
-            const el = document.getElementById(modalId);
-            
-            // If no modal found, we just skip init. 
-            // Logic will fallback to native confirm() if modal is missing at runtime.
-            if (!el) return;
-
-            // Strategy 1: Bootstrap 5 (Only if detected and requested via structure/config)
-            // We use a heuristic: if it has 'modal-dialog' class, it's likely BS.
-            const isBootstrap = el.querySelector('.modal-dialog') && global.bootstrap && global.bootstrap.Modal;
-            
-            if (isBootstrap) {
-                try {
-                    this.modal = new global.bootstrap.Modal(el);
-                } catch (e) {
-                    console.warn("[KrisForm] Bootstrap init failed", e);
-                }
-            } 
-
-            // Strategy 2: Vanilla / Custom
-            if (!this.modal) {
-                this.modal = {
-                    show: () => {
-                        el.classList.add('show');
-                        // Ensure it's visible if CSS relies on display property
-                        if (getComputedStyle(el).display === 'none') el.style.display = 'flex'; 
-                        document.body.classList.add('modal-open'); 
-                    },
-                    hide: () => {
-                        el.classList.remove('show');
-                        if (el.style.display === 'flex') el.style.display = '';
-                        document.body.classList.remove('modal-open');
-                    },
-                    dispose: () => {}
-                };
-            }
         }
 
         _groupDependencies() {
@@ -804,7 +757,32 @@
 
             // Validate on input
             if (el.matches('[data-validator]')) {
-                this.validateField(el);
+                const mode = this.config.validationMode;
+                
+                if (mode !== 'blur') {
+                    const runValidation = () => {
+                        if (mode === 'lazy') {
+                            // Lazy mode: validate on input ONLY if field is already invalid (to clear error)
+                            // Initial validation happens on blur
+                            if (el.classList.contains(this.config.classes.invalid[0])) {
+                                this.validateField(el);
+                            }
+                        } else {
+                            // Immediate or Delayed mode
+                            this.validateField(el);
+                        }
+                    };
+
+                    if (mode === 'delayed') {
+                        if (el._krisValTimeout) clearTimeout(el._krisValTimeout);
+                        el._krisValTimeout = setTimeout(() => {
+                            runValidation();
+                            delete el._krisValTimeout;
+                        }, this.config.validationDelay);
+                    } else {
+                        runValidation();
+                    }
+                }
             }
 
             // Dependencies (Instant)
@@ -889,12 +867,92 @@
                         const result = this.validator.validate(value, rules, el);
 
             if (!result.valid) {
+                // If sync validation fails, cancel any pending async checks
+                if (el._krisAsyncTimeout) clearTimeout(el._krisAsyncTimeout);
+                delete el._krisAsyncPending;
+                
                 this.setError(el, result.failed, result.param);
                 return false;
-            } else {
+            }
+
+            // Synchronous pass OK. Check for async rules.
+            const remoteMatch = rules.match(/remote:([^,]+)/);
+            if (remoteMatch) {
+                return this._validateRemote(el, value, remoteMatch[1]);
+            }
+
+            this.clearError(el);
+            return true;
+        }
+
+        /**
+         * Handles async remote validation.
+         * Returns 'false' immediately to block submit until server responds.
+         */
+        _validateRemote(el, value, urlPath) {
+            // If empty (and not required), skip remote check
+            if (value === '' || value === null) {
                 this.clearError(el);
                 return true;
             }
+
+            // Cache check
+            const cacheKey = `${urlPath}:${value}`;
+            if (el._krisAsyncCache && el._krisAsyncCache[cacheKey] !== undefined) {
+                const cached = el._krisAsyncCache[cacheKey];
+                if (cached.valid) {
+                    this.clearError(el);
+                    return true;
+                } else {
+                    this.setError(el, 'remote', null, cached.message);
+                    return false;
+                }
+            }
+
+            // Debounce
+            if (el._krisAsyncTimeout) clearTimeout(el._krisAsyncTimeout);
+            
+            // Set pending state (UI)
+            el._krisAsyncPending = true;
+            el.classList.add('is-loading'); // Optional: CSS can show spinner
+            
+            el._krisAsyncTimeout = setTimeout(() => {
+                let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
+                const encodedVal = encodeURIComponent(value);
+                
+                if (url.includes('{value}')) {
+                    url = url.replace('{value}', encodedVal);
+                } else {
+                    const separator = url.includes('?') ? '&' : '?';
+                    url += `${separator}value=${encodedVal}`;
+                }
+
+                fetch(url)
+                    .then(r => r.json())
+                    .then(data => {
+                        // Cache result
+                        if (!el._krisAsyncCache) el._krisAsyncCache = {};
+                        el._krisAsyncCache[cacheKey] = data;
+
+                        // Ensure value hasn't changed while request was in flight
+                        if (this._getElValue(el) === value) {
+                            if (data.valid) {
+                                this.clearError(el);
+                                // If triggered by submit (and this was the only error), user has to click submit again 
+                                // or we could trigger a custom event.
+                            } else {
+                                this.setError(el, 'remote', null, data.message);
+                            }
+                        }
+                    })
+                    .catch(console.error)
+                    .finally(() => {
+                        el.classList.remove('is-loading');
+                        delete el._krisAsyncPending;
+                    });
+            }, 500); // Fixed 500ms delay for remote checks
+
+            return false;
         }
 
         validateAll() {
@@ -909,7 +967,7 @@
             return valid;
         }
 
-        setError(el, rule, param) {
+        setError(el, rule, param, customMsg = null) {
             el.classList.add(...this.config.classes.invalid);
             
             let feedback = this._findFeedback(el);
@@ -921,17 +979,21 @@
                 container.appendChild(feedback);
             }
             
-            const i18n = global.KrisFormTranslateMessages || {};
-            // Look for data-msg-rule attribute first
-            let msg = el.getAttribute(`data-msg-${rule}`);
+            let msg = customMsg;
             
             if (!msg) {
-                if (i18n[rule]) {
-                    msg = i18n[rule].replace('%s', param || '');
-                } else if (i18n.default) {
-                    msg = i18n.default.replace('%s', rule);
-                } else {
-                    msg = `${this.config.i18n.defaultError}: ${rule}`;
+                const i18n = global.KrisFormTranslateMessages || {};
+                // Look for data-msg-rule attribute first
+                msg = el.getAttribute(`data-msg-${rule}`);
+                
+                if (!msg) {
+                    if (i18n[rule]) {
+                        msg = i18n[rule].replace('%s', param || '');
+                    } else if (i18n.default) {
+                        msg = i18n.default.replace('%s', rule);
+                    } else {
+                        msg = `${this.config.i18n.defaultError}: ${rule}`;
+                    }
                 }
             }
             
@@ -993,61 +1055,43 @@
             }
 
             if (confirmMsg) {
-                // Find message element inside the specific modal container if possible, or global fallback
-                const modalId = this.config.modalId || 'dependencyConfirmModal';
-                const modalEl = document.getElementById(modalId);
-                
-                let msgEl = null;
-                let btnOk = null;
-                let btnCancel = null;
-
-                if (modalEl) {
-                    // Look inside the modal first (Best Practice for multiple modals)
-                    msgEl = modalEl.querySelector('.confirm-message') || document.getElementById('dependencyConfirmMessage');
-                    btnOk = modalEl.querySelector('.btn-confirm') || document.getElementById('btnConfirmOk');
-                    btnCancel = modalEl.querySelector('.btn-cancel') || document.getElementById('btnConfirmCancel');
-                } else {
-                    // Global fallback
-                    msgEl = document.getElementById('dependencyConfirmMessage');
-                    btnOk = document.getElementById('btnConfirmOk');
-                    btnCancel = document.getElementById('btnConfirmCancel');
-                }
-
                 const i18n = global.KrisFormTranslateMessages || {};
-                
-                if (msgEl) {
-                    const text = i18n[confirmMsg] ? i18n[confirmMsg] : confirmMsg;
-                    Utils.setText(msgEl, text);
-                }
+                const message = i18n[confirmMsg] ? i18n[confirmMsg] : confirmMsg;
 
-                // Dynamic Handlers
+                // Callbacks
                 const onConfirm = () => {
                     this.state.lastCommittedValues.set(sourceName, val);
                     this._processDependenciesForField(sourceName, true);
                     this._checkDirty();
-                    cleanup();
                 };
                 
                 const onCancel = () => {
                     const oldVal = this.state.lastCommittedValues.get(sourceName);
                     Utils.setElementValue(el, oldVal);
                     setTimeout(() => this._processDependenciesForField(sourceName, true), 0);
-                    cleanup();
                 };
 
-                const cleanup = () => {
-                    if (this.modal) this.modal.hide();
-                    if(btnOk) btnOk.onclick = null;
-                    if(btnCancel) btnCancel.onclick = null;
-                };
+                // 1. Dispatch event for UI Adapters
+                const event = new CustomEvent(CONSTANTS.EVENT_NAMESPACE + ':confirm', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: {
+                        message: message,
+                        onConfirm: onConfirm,
+                        onCancel: onCancel,
+                        trigger: el
+                    }
+                });
 
-                if (this.modal && modalEl) {
-                    if(btnOk) btnOk.onclick = (e) => { e.preventDefault(); onConfirm(); };
-                    if(btnCancel) btnCancel.onclick = (e) => { e.preventDefault(); onCancel(); };
-                    this.modal.show();
-                } else {
-                    if (confirm(confirmMsg)) onConfirm(); 
-                    else onCancel();
+                const allowed = this.el.dispatchEvent(event);
+
+                // 2. Fallback to native confirm if no one prevented default
+                if (allowed) {
+                    if (confirm(message)) {
+                        onConfirm();
+                    } else {
+                        onCancel();
+                    }
                 }
 
             } else {

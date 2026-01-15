@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Документация KrisForm v2.2.1</title>
+    <title>Документация KrisForm v2.2.2</title>
 
     <!-- Fonts -->
     <link
@@ -278,7 +278,7 @@
     <!-- Sidebar -->
     <nav id="sidebar" class="sidebar offcanvas-lg offcanvas-start">
         <div class="brand">KrisForm <span
-                style="opacity:0.5; font-weight:400; font-size:0.8em; margin-left:8px">v2.2.1</span></div>
+                style="opacity:0.5; font-weight:400; font-size:0.8em; margin-left:8px">v2.2.2</span></div>
         
         <!-- Language Switcher -->
         <div class="lang-switch align-items-center">
@@ -298,16 +298,18 @@
 
             <div class="nav-section">Справочник</div>
             <a href="#validation" class="nav-link">Правила валидации</a>
+            <a href="#validation-modes" class="nav-link">Режимы валидации</a>
             <a href="#custom-validators" class="nav-link">Кастомные валидаторы</a>
             <a href="#dependencies" class="nav-link">JSON Зависимости</a>
             <a href="#expressions" class="nav-link">Синтаксис выражений</a>
+            <a href="#adapters" class="nav-link">UI Адаптеры</a>
 
             <div class="nav-section">Живые примеры</div>
             <a href="#ex-complex" class="nav-link">1. Сложная логика</a>
-            <a href="#ex-modals" class="nav-link">2. Модальные окна</a>
-            <a href="#ex-i18n" class="nav-link">3. Локализация</a>
-            <a href="#ex-computed" class="nav-link">4. Вычисляемые значения</a>
-            <a href="#ex-data" class="nav-link">5. Динамические данные (AJAX)</a>
+            <a href="#ex-i18n" class="nav-link">2. Локализация</a>
+            <a href="#ex-computed" class="nav-link">3. Вычисляемые значения</a>
+            <a href="#ex-data" class="nav-link">4. Динамические данные (AJAX)</a>
+            <a href="#ex-async" class="nav-link">5. Асинхронная валидация</a>
         </div>
     </nav>
 
@@ -327,20 +329,88 @@
         <section id="config">
             <h2>Конфигурация</h2>
             <pre><code class="language-javascript">const options = {
-    updateDelay: 10, // Задержка проверки (мс)
-    modalId: 'dependencyConfirmModal', // ID модального окна по умолчанию
+    updateDelay: 10, // Задержка зависимостей (мс)
+    validationMode: 'lazy', // Режимы: 'lazy' | 'immediate' | 'delayed' | 'blur'
+    validationDelay: 300, // Задержка для режима 'delayed' (мс)
     
     // Тексты системных сообщений
     i18n: {
-        defaultError: "Ошибка валидации",
-        confirmTitle: "Подтверждение",
-        confirm: "Да",
-        cancel: "Отмена"
+        defaultError: "Ошибка валидации"
     },
     
     dependencies: [] // Массив логики
 };</code></pre>
         </section>
+
+        <section id="adapters">
+            <h2>UI Адаптеры (Диалоги)</h2>
+            <p>Библиотека не зависит от UI-фреймворков. Для подтверждения действий она вызывает событие <code>krisform:confirm</code>. Вы можете слушать его, чтобы показать Bootstrap модалку, SweetAlert или что угодно.</p>
+            
+            <p>
+                <strong>Попробуйте:</strong> Нажмите переключатели, чтобы вызвать событие, которое обработает демо-адаптер на этой странице.
+            </p>
+            
+            <div id="adapter-demo-wrapper">
+                <div class="d-flex gap-3 mb-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="ad_bs" id="ad_bs">
+                        <label class="form-check-label fw-bold" for="ad_bs">Bootstrap Диалог</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="ad_v" id="ad_v">
+                        <label class="form-check-label fw-bold" for="ad_v">Vanilla Диалог</label>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label small text-muted">Целевое поле (Target):</label>
+                    <input id="adapter-target" class="form-control" value="Защищенные данные" disabled>
+                    <div id="adapter-log" class="small text-success mt-2" style="min-height: 20px;"></div>
+                </div>
+            </div>
+
+            <div class="ex-card mb-4">
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">1. Конфигурация формы (Триггер)</h6>
+                    <pre class="m-0"><code class="language-javascript">new KrisForm(el, {
+    dependencies: [
+        { 
+            source: "my_switch", 
+            condition: "checked === true", 
+            action: "enable", 
+            target: "my_field",
+            // Это свойство вызывает событие confirm
+            confirm: "Вы уверены, что хотите разблокировать поле?" 
+        }
+    ]
+});</code></pre>
+                </div>
+            </div>
+
+            <div class="ex-card">
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">2. UI Адаптер (Обработчик)</h6>
+                                <pre class="m-0"><code class="language-javascript">document.addEventListener('krisform:confirm', (e) => {
+                e.preventDefault(); // Отменяем нативный confirm()
+
+                const { message, onConfirm, onCancel } = e.detail;
+
+                // 1. Заполняем модалку
+                document.querySelector('#myModal .modal-body').textContent = message;
+
+                // 2. Биндим кнопки
+                const btnOk = document.querySelector('#myModal .btn-confirm');
+                const btnCancel = document.querySelector('#myModal .btn-cancel');
+
+                // ... логика биндинга ...
+
+                // 3. Показываем
+                const myModal = new bootstrap.Modal(document.getElementById('myModal'));
+                myModal.show();
+            });</code></pre>
+                            </div>
+                        </div>
+                    </section>
 
         <!-- Real-world Demo -->
                 <section id="hero-demo" class="mb-5">
@@ -633,12 +703,83 @@
                         <td><code>image</code></td>
                         <td>Файл является изображением.</td>
                     </tr>
+                    <tr>
+                        <td><code>remote:path</code></td>
+                        <td>Асинхронная проверка. GET запрос на <code>endpoint/path?value=...</code>. Ожидает JSON <code>{"valid":true}</code>.</td>
+                    </tr>
                 </tbody>
             </table>
         </section>
 
-        <section id="custom-validators">
-            <h2>Кастомные валидаторы</h2>
+        <section id="validation-modes">
+                    <h2>Режимы валидации (UX)</h2>
+                    <p>Управляйте моментом срабатывания проверки для улучшения пользовательского опыта.</p>
+
+                    <table class="doc-table table table-bordered mb-4">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px">Режим</th>
+                                <th>Поведение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>lazy</code> <span class="badge bg-secondary">По умолчанию</span></td>
+                                <td>
+                                    <strong>Лучший UX.</strong> Проверяет при потере фокуса (blur). 
+                                    Если найдена ошибка, переключается на мгновенную проверку (immediate), чтобы пользователь сразу видел исправление.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>immediate</code></td>
+                                <td>Проверяет при каждом нажатии клавиши. Агрессивная обратная связь.</td>
+                            </tr>
+                            <tr>
+                                <td><code>delayed</code></td>
+                                <td>Проверяет при вводе, но с задержкой (Debounce). Задержка задается через <code>validationDelay</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>blur</code></td>
+                                <td>Проверяет только когда пользователь уходит с поля.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="ex-card">
+                        <div class="ex-view">
+                            <div class="mb-3 border-bottom pb-3">
+                                <label class="form-label small text-muted text-uppercase fw-bold">Выберите режим:</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="vmode" id="vm1" value="lazy" checked onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm1">Lazy</label>
+
+                                    <input type="radio" class="btn-check" name="vmode" id="vm2" value="immediate" onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm2">Immediate</label>
+
+                                    <input type="radio" class="btn-check" name="vmode" id="vm3" value="delayed" onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm3">Delayed (300мс)</label>
+
+                                    <input type="radio" class="btn-check" name="vmode" id="vm4" value="blur" onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm4">Blur</label>
+                                </div>
+                            </div>
+
+                            <form id="form-modes" novalidate onsubmit="return false;">
+                                <div class="mb-0">
+                                    <label class="form-label">Email (Обязательно)</label>
+                                    <input name="email" class="form-control" data-validator="required,email" placeholder="Введите текст для теста...">
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="ex-code p-4">
+                            <pre class="m-0"><code class="language-javascript" id="code-modes">new KrisForm(el, { validationMode: 'lazy' });</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="custom-validators">
+                    <h2>Кастомные валидаторы</h2>
             <p>Вы можете расширять функционал библиотеки, добавляя собственные функции проверки для конкретного экземпляра формы. Правила добавляются напрямую в объект <code>validator.rules</code>.</p>
 
             <div class="ex-card">
@@ -823,96 +964,8 @@ new KrisForm(document.getElementById('form-complex'), { dependencies: rules });<
         </section>
 
         <!-- Example 2 -->
-        <section id="ex-modals">
-            <h2>2. Модальные окна</h2>
-            <p>Библиотека поддерживает подтверждение действий. Вы можете использовать Bootstrap или свою верстку
-                (Vanilla).</p>
-
-            <div class="row g-4 mb-4">
-                <!-- Демонстрация (Preview) -->
-                <div class="col-lg-6">
-                    <div class="ex-card mt-0 h-100">
-                        <div class="p-3 bg-light border-bottom fw-bold">Bootstrap 5</div>
-                        <div class="p-4 bg-white">
-                            <form id="form-bs">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="bs_sw" id="sw1">
-                                    <label class="form-check-label" for="sw1">Админ-режим</label>
-                                </div>
-                                <input name="bs_data" class="form-control" value="Системные файлы" disabled>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="ex-card mt-0 h-100">
-                        <div class="p-3 bg-light border-bottom fw-bold">Ванильный JS</div>
-                        <div class="p-4 bg-white">
-                            <form id="form-vanilla">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="v_sw" id="sw2">
-                                    <label class="form-check-label" for="sw2">Удаление данных</label>
-                                </div>
-                                <input name="v_data" class="form-control" value="Архив 2023" disabled>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Код примера -->
-            <div class="ex-code p-4 rounded-3">
-                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML (В конце body)</h6>
-                <pre class="m-0 mb-4"><code class="language-html">&lt;!-- Для Bootstrap: Стандартная разметка --&gt;
-&lt;div class="modal fade" id="modal-bs" tabindex="-1"&gt;
-  &lt;div class="modal-dialog"&gt;
-    &lt;div class="modal-content"&gt;
-      &lt;div class="modal-body"&gt;
-        &lt;p class="confirm-message"&gt;&lt;/p&gt;
-      &lt;/div&gt;
-      &lt;div class="modal-footer"&gt;
-        &lt;button class="btn btn-secondary btn-cancel"&gt;Отмена&lt;/button&gt;
-        &lt;button class="btn btn-primary btn-confirm"&gt;ОК&lt;/button&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;!-- Для Vanilla: Кастомная верстка --&gt;
-&lt;div id="modal-vanilla" style="display:none"&gt;
-  &lt;div class="my-custom-dialog"&gt;
-    &lt;p class="confirm-message"&gt;&lt;/p&gt;
-    &lt;button class="btn-cancel"&gt;Нет&lt;/button&gt;
-    &lt;button class="btn-confirm"&gt;Да&lt;/button&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</code></pre>
-
-                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
-                <pre class="m-0"><code class="language-javascript">// Конфигурация для Bootstrap формы
-new KrisForm(document.getElementById('form-bs'), {
-  modalId: 'modal-bs', // ID модального окна
-  dependencies: [{
-    source: "bs_sw", condition: "checked === true", 
-    action: "enable", inverse_action: "disable", target: "bs_data",
-    confirm: "Включить режим администратора?" // Текст подтверждения
-  }]
-});
-
-// Конфигурация для Ванильной формы
-new KrisForm(document.getElementById('form-vanilla'), {
-  modalId: 'modal-vanilla',
-  dependencies: [{
-    source: "v_sw", condition: "checked === true", 
-    action: "enable", inverse_action: "disable", target: "v_data",
-    confirm: "Удалить архив?"
-  }]
-});</code></pre>
-            </div>
-        </section>
-
-        <!-- Example 3 -->
         <section id="ex-i18n">
-            <h2>3. Локализация (Перевод ошибок)</h2>
+            <h2>2. Локализация (Перевод ошибок)</h2>
             <p>
                 Вы можете глобально переопределить тексты ошибок через объект
                 <code>window.KrisFormTranslateMessages</code>.
@@ -970,9 +1023,9 @@ new KrisForm(document.getElementById('form-i18n'));</code></pre>
             </div>
         </section>
 
-        <!-- Example 4 -->
-        <section id="ex-computed">
-            <h2>4. Вычисляемые значения</h2>
+        <!-- Example 3 -->
+                <section id="ex-computed">
+                    <h2>3. Вычисляемые значения</h2>
             <p>
                 Используйте действие <code>set_computed_value</code> для выполнения арифметических операций на основе значений других полей.
                 Поддерживаются операторы <code>+ - * /</code> и функции <code>min/max</code>.
@@ -1016,9 +1069,9 @@ new KrisForm(document.getElementById('form-computed'), {
             </div>
         </section>
 
-        <!-- Пример 5: Динамические данные -->
-        <section id="ex-data">
-            <h2>5. Динамическая загрузка (AJAX)</h2>
+                <!-- Пример 4: Динамические данные -->
+                        <section id="ex-data">
+                            <h2>4. Динамическая загрузка (AJAX)</h2>
             <p>
                 KrisForm может автоматически загружать данные из API и заполнять поле (Select/Input) при выполнении условий.
                 <br>Используйте свойство <code>data-url</code>. Плейсхолдер <code>{value}</code> заменяется значением поля-источника.
@@ -1098,6 +1151,41 @@ new KrisForm(document.getElementById('form-computed'), {
                         <pre class="m-0"><code class="language-html">&lt;!-- Библиотека выберет 'msk', как только данные загрузятся --&gt;
 &lt;select name="city" data-value="msk"&gt;&lt;/select&gt;</code></pre>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Пример 5: Асинхронная валидация -->
+                <section id="ex-async">
+                    <h2>5. Асинхронная валидация (Remote)</h2>
+            <p>
+                Используйте правило <code>remote:endpoint</code> для проверки данных на сервере (например, уникальность логина).
+                <br>Библиотека автоматически делает задержку (debounce 500мс) и блокирует форму на время запроса.
+            </p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-async" novalidate onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Имя пользователя</label>
+                            <input name="username" class="form-control" data-validator="required,remote:check-user" placeholder="Попробуйте 'admin' (занято)">
+                            <div class="invalid-feedback"></div>
+                            <div class="form-text text-muted">Занятые имена: admin, root, test</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML Разметка</h6>
+                    <pre class="m-0 mb-4"><code class="language-html">&lt;input name="username" 
+       data-validator="required,remote:check-user"&gt;</code></pre>
+
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">new KrisForm(document.getElementById('form-async'), {
+    endpoint: "/api/v1/" // Базовый URL API
+});
+// HTML: data-validator="required,remote:check-user"
+// Запрос: GET /api/v1/check-user?value=admin
+// Ответ: { "valid": false, "message": "Имя занято" }</code></pre>
                 </div>
             </div>
         </section>
@@ -1214,22 +1302,93 @@ new KrisForm(document.getElementById('form-computed'), {
                 ]
             });
 
-            // 2. Modals
-            const confirmLogic = (src, target, msg) => [{
-                source: src, condition: "checked === true", action: "enable", inverse_action: "disable", target: target, confirm: msg
-            }];
+            // Helper for safe init
+                        const safeInit = (id, opts) => {
+                            const el = document.getElementById(id);
+                            if (el) new KrisForm(el, opts);
+                        };
 
-            // BS Instance
-            new KrisForm(document.getElementById('form-bs'), {
-                dependencies: confirmLogic("bs_sw", "bs_data", "Включить режим администратора?"),
-                modalId: 'modal-bs' // ID Bootstrap модалки
-            });
+                        // 2. Modals (Event Driven)
+                        const confirmLogic = (src, target, msg) => [{
+                            source: src, condition: "value === true", action: "enable", inverse_action: "disable", target: target, confirm: msg
+                        }];
 
-            // Vanilla Instance
-            new KrisForm(document.getElementById('form-vanilla'), {
-                dependencies: confirmLogic("v_sw", "v_data", "Это действие необратимо. Продолжить?"),
-                modalId: 'modal-vanilla' // ID Ванильной модалки
-            });
+                        
+
+                        // Демо для раздела Адаптеров (Взаимодействие с Target)
+                        const logEl = document.getElementById('adapter-log');
+                        const log = (msg) => { 
+                            if(logEl) {
+                                logEl.textContent = `[Log] ${msg}`;
+                                logEl.classList.remove('text-success', 'text-danger');
+                                logEl.classList.add(msg.includes('Отмена') ? 'text-danger' : 'text-success');
+                                setTimeout(() => logEl.textContent = '', 3000);
+                            }
+                        };
+
+                        const adapterWrapper = document.getElementById('adapter-demo-wrapper');
+                                    if (adapterWrapper) {
+                                        new KrisForm(adapterWrapper, {
+                                            dependencies: [
+                                                { 
+                                                    source: "ad_bs", condition: "checked === true", 
+                                                    action: "enable", inverse_action: "disable", 
+                                                    target: "adapter-target", 
+                                                    confirm: "Разблокировать поле через Bootstrap?" 
+                                                },
+                                                { 
+                                                    source: "ad_v", condition: "checked === true", 
+                                                    action: "enable", inverse_action: "disable", 
+                                                    target: "adapter-target",
+                                                    confirm: "Разблокировать поле через Vanilla?" 
+                                                }
+                                            ]
+                                        });
+                                    }
+
+                        // --- UI ADAPTER FOR DEMO ---
+                        document.addEventListener('krisform:confirm', (e) => {
+                            e.preventDefault(); // Остановить нативный confirm
+                            const { message, onConfirm, onCancel, trigger } = e.detail;
+
+                            if (typeof log === 'function') log(`Событие получено. Источник: ${trigger.name}`);
+
+                            // Определяем модалку по имени поля-источника
+                            const isBs = trigger.name === 'bs_sw' || trigger.name === 'ad_bs';
+                            const modalId = isBs ? 'modal-bs' : 'modal-vanilla';
+                            const el = document.getElementById(modalId);
+
+                            if (!el) return console.error('Modal not found:', modalId);
+
+                            // Текст
+                            const msgEl = el.querySelector('.confirm-message');
+                            if (msgEl) msgEl.textContent = message;
+
+                            // Кнопки
+                            const btnOk = el.querySelector('.btn-confirm');
+                            const btnCancel = el.querySelector('.btn-cancel');
+
+                            // Закрытие
+                            const close = () => {
+                                if(isBs && window.bootstrap) {
+                                    const instance = bootstrap.Modal.getInstance(el);
+                                    if (instance) instance.hide();
+                                } else {
+                                    el.classList.remove('show');
+                                }
+                            };
+
+                            // Привязка (перезапись onclick)
+                            if(btnOk) btnOk.onclick = () => { onConfirm(); close(); if(typeof log === 'function') log('Подтверждено'); };
+                            if(btnCancel) btnCancel.onclick = () => { onCancel(); close(); if(typeof log === 'function') log('Отмена'); };
+
+                            // Показ
+                            if(isBs && window.bootstrap) {
+                                new bootstrap.Modal(el).show();
+                            } else {
+                                el.classList.add('show');
+                            }
+                        });
 
             // 3. I18n Demo
             window.krisI18n = new KrisForm(document.getElementById('form-i18n'));
@@ -1306,6 +1465,56 @@ new KrisForm(document.getElementById('form-computed'), {
                     }
                 ]
             });
+
+            // 7. Демо Асинхронной Валидации
+                        // Эмуляция Fetch для демо
+                        const originalFetch = window.fetch;
+                        window.fetch = async (url) => {
+                            if (url.includes('check-user')) {
+                                const val = new URLSearchParams(url.split('?')[1]).get('value');
+                                await new Promise(r => setTimeout(r, 600)); // Эмуляция задержки сети
+
+                                const taken = ['admin', 'root', 'test'].includes(val);
+                                return {
+                                    ok: true,
+                                    json: async () => ({
+                                        valid: !taken,
+                                        message: taken ? `Имя '${val}' уже занято.` : ''
+                                    })
+                                };
+                            }
+                            return originalFetch(url);
+                        };
+
+                        new KrisForm(document.getElementById('form-async'), {
+                            endpoint: "/api/mock/",
+                            validationMode: "immediate"
+                        });
+
+                        // 6. Демо Режимов Валидации
+                        let vModeInstance = null;
+                        window.updateVMode = function(mode) {
+                const el = document.getElementById('form-modes');
+                
+                // Очистка состояния
+                if (vModeInstance) vModeInstance.destroy();
+                el.reset();
+                el.querySelectorAll('.is-invalid').forEach(e => e.classList.remove('is-invalid'));
+                el.querySelectorAll('.invalid-feedback').forEach(e => e.style.display = 'none');
+
+                // Обновление кода
+                const delayStr = mode === 'delayed' ? ', validationDelay: 300' : '';
+                document.getElementById('code-modes').textContent = `new KrisForm(el, { validationMode: '${mode}'${delayStr} });`;
+                if(window.Prism) Prism.highlightElement(document.getElementById('code-modes'));
+
+                // Инициализация
+                vModeInstance = new KrisForm(el, {
+                    validationMode: mode,
+                    validationDelay: 300
+                });
+            };
+            // Старт
+            window.updateVMode('lazy');
         });
     </script>
 </body>

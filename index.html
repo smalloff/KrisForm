@@ -298,16 +298,18 @@
 
             <div class="nav-section">Reference</div>
             <a href="#validation" class="nav-link">Validation Rules</a>
+            <a href="#validation-modes" class="nav-link">Validation Modes</a>
             <a href="#custom-validators" class="nav-link">Custom Validators</a>
             <a href="#dependencies" class="nav-link">JSON Dependencies</a>
             <a href="#expressions" class="nav-link">Expression Syntax</a>
+            <a href="#adapters" class="nav-link">UI Adapters</a>
 
             <div class="nav-section">Live Examples</div>
             <a href="#ex-complex" class="nav-link">1. Complex Logic</a>
-            <a href="#ex-modals" class="nav-link">2. Modal Confirmations</a>
-            <a href="#ex-i18n" class="nav-link">3. Localization</a>
-            <a href="#ex-computed" class="nav-link">4. Computed Values</a>
-            <a href="#ex-data" class="nav-link">5. Dynamic Data (AJAX)</a>
+            <a href="#ex-i18n" class="nav-link">2. Localization</a>
+            <a href="#ex-computed" class="nav-link">3. Computed Values</a>
+            <a href="#ex-data" class="nav-link">4. Dynamic Data (AJAX)</a>
+            <a href="#ex-async" class="nav-link">5. Async Validation</a>
         </div>
     </nav>
 
@@ -327,20 +329,88 @@
         <section id="config">
             <h2>Configuration</h2>
             <pre><code class="language-javascript">const options = {
-    updateDelay: 10, // Validation debounce (ms)
-    modalId: 'dependencyConfirmModal', // Default modal ID
+    updateDelay: 10, // Dependency debounce (ms)
+    validationMode: 'lazy', // Modes: 'lazy' | 'immediate' | 'delayed' | 'blur'
+    validationDelay: 300, // Delay for 'delayed' mode (ms)
     
     // System message texts
     i18n: {
-        defaultError: "Validation failed",
-        confirmTitle: "Confirmation",
-        confirm: "Yes",
-        cancel: "Cancel"
+        defaultError: "Validation failed"
     },
     
     dependencies: [] // Logic array
 };</code></pre>
         </section>
+
+        <section id="adapters">
+            <h2>UI Adapters (Dialogs)</h2>
+            <p>The library is UI-agnostic. For confirmation dialogs, it dispatches the <code>krisform:confirm</code> event. You can listen to this event to show a Bootstrap Modal, SweetAlert, or any custom UI.</p>
+            
+            <p>
+                <strong>Try it:</strong> Click the buttons below to trigger the event handled by the demo adapter on this page.
+            </p>
+            
+            <div id="adapter-demo-wrapper">
+                <div class="d-flex gap-3 mb-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="ad_bs" id="ad_bs">
+                        <label class="form-check-label fw-bold" for="ad_bs">Trigger Bootstrap Modal</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="ad_v" id="ad_v">
+                        <label class="form-check-label fw-bold" for="ad_v">Trigger Vanilla Modal</label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small text-muted">Target Field:</label>
+                    <input id="adapter-target" class="form-control" value="Protected Data" disabled>
+                    <div id="adapter-log" class="small text-success mt-2" style="min-height: 20px;"></div>
+                </div>
+            </div>
+
+            <div class="ex-card mb-4">
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">1. Form Configuration (Trigger)</h6>
+                    <pre class="m-0"><code class="language-javascript">new KrisForm(el, {
+    dependencies: [
+        { 
+            source: "my_switch", 
+            condition: "checked === true", 
+            action: "enable", 
+            target: "my_field",
+            // This triggers the event
+            confirm: "Are you sure you want to enable this?" 
+        }
+    ]
+});</code></pre>
+                </div>
+            </div>
+
+            <div class="ex-card">
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">2. UI Adapter (Listener)</h6>
+                                <pre class="m-0"><code class="language-javascript">document.addEventListener('krisform:confirm', (e) => {
+                e.preventDefault(); // Stop native confirm() fallback
+
+                const { message, onConfirm, onCancel } = e.detail;
+
+                // 1. Fill Modal
+                document.querySelector('#myModal .modal-body').textContent = message;
+
+                // 2. Bind Buttons
+                const btnOk = document.querySelector('#myModal .btn-confirm');
+                const btnCancel = document.querySelector('#myModal .btn-cancel');
+
+                // ... binding logic ...
+
+                // 3. Show
+                const myModal = new bootstrap.Modal(document.getElementById('myModal'));
+                myModal.show();
+            });</code></pre>
+                            </div>
+                        </div>
+                    </section>
 
         <!-- Real-world Demo -->
                 <section id="hero-demo" class="mb-5">
@@ -633,12 +703,83 @@
                         <td><code>image</code></td>
                         <td>File is an image.</td>
                     </tr>
+                    <tr>
+                        <td><code>remote:path</code></td>
+                        <td>Async check via API. Sends <code>?value=...</code> to <code>endpoint/path</code>. Expects <code>{"valid":true}</code>.</td>
+                    </tr>
                 </tbody>
             </table>
         </section>
 
-        <section id="custom-validators">
-            <h2>Custom Validators</h2>
+        <section id="validation-modes">
+                    <h2>Validation Modes</h2>
+                    <p>Control when validation triggers to improve User Experience.</p>
+
+                    <table class="doc-table table table-bordered mb-4">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px">Mode</th>
+                                <th>Behavior</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>lazy</code> <span class="badge bg-secondary">Default</span></td>
+                                <td>
+                                    <strong>Best UX.</strong> Validates on <code>blur</code> initially. 
+                                    If field becomes invalid, it switches to <code>immediate</code> validation to help user fix it instantly.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>immediate</code></td>
+                                <td>Validates on every keystroke (<code>input</code> event). Aggressive feedback.</td>
+                            </tr>
+                            <tr>
+                                <td><code>delayed</code></td>
+                                <td>Validates on input with debounce delay (defined by <code>validationDelay</code>). Good balance.</td>
+                            </tr>
+                            <tr>
+                                <td><code>blur</code></td>
+                                <td>Validates only when field loses focus.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="ex-card">
+                        <div class="ex-view">
+                            <div class="mb-3 border-bottom pb-3">
+                                <label class="form-label small text-muted text-uppercase fw-bold">Select Mode:</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="vmode" id="vm1" value="lazy" checked onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm1">Lazy</label>
+
+                                    <input type="radio" class="btn-check" name="vmode" id="vm2" value="immediate" onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm2">Immediate</label>
+
+                                    <input type="radio" class="btn-check" name="vmode" id="vm3" value="delayed" onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm3">Delayed (300ms)</label>
+
+                                    <input type="radio" class="btn-check" name="vmode" id="vm4" value="blur" onchange="updateVMode(this.value)">
+                                    <label class="btn btn-outline-primary btn-sm" for="vm4">Blur</label>
+                                </div>
+                            </div>
+
+                            <form id="form-modes" novalidate onsubmit="return false;">
+                                <div class="mb-0">
+                                    <label class="form-label">Email (Required)</label>
+                                    <input name="email" class="form-control" data-validator="required,email" placeholder="Type here to test...">
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="ex-code p-4">
+                            <pre class="m-0"><code class="language-javascript" id="code-modes">new KrisForm(el, { validationMode: 'lazy' });</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="custom-validators">
+                    <h2>Custom Validators</h2>
             <p>You can extend the library by adding custom check functions to a specific form instance. Rules are added directly to the <code>validator.rules</code> object.</p>
 
             <div class="ex-card">
@@ -825,95 +966,8 @@ new KrisForm(document.getElementById('form-complex'), { dependencies: rules });<
         </section>
 
         <!-- Example 2 -->
-        <section id="ex-modals">
-            <h2>2. Modal Confirmations</h2>
-            <p>The library supports action confirmation. You can use Bootstrap or your own markup (Vanilla).</p>
-
-            <div class="row g-4 mb-4">
-                <!-- Preview -->
-                <div class="col-lg-6">
-                    <div class="ex-card mt-0 h-100">
-                        <div class="p-3 bg-light border-bottom fw-bold">Bootstrap 5</div>
-                        <div class="p-4 bg-white">
-                            <form id="form-bs">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="bs_sw" id="sw1">
-                                    <label class="form-check-label" for="sw1">Admin Mode</label>
-                                </div>
-                                <input name="bs_data" class="form-control" value="System Files" disabled>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="ex-card mt-0 h-100">
-                        <div class="p-3 bg-light border-bottom fw-bold">Vanilla JS</div>
-                        <div class="p-4 bg-white">
-                            <form id="form-vanilla">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="v_sw" id="sw2">
-                                    <label class="form-check-label" for="sw2">Delete Data</label>
-                                </div>
-                                <input name="v_data" class="form-control" value="Archive 2023" disabled>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Code -->
-            <div class="ex-code p-4 rounded-3">
-                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML (End of body)</h6>
-                <pre class="m-0 mb-4"><code class="language-html">&lt;!-- For Bootstrap: Standard markup --&gt;
-&lt;div class="modal fade" id="modal-bs" tabindex="-1"&gt;
-  &lt;div class="modal-dialog"&gt;
-    &lt;div class="modal-content"&gt;
-      &lt;div class="modal-body"&gt;
-        &lt;p class="confirm-message"&gt;&lt;/p&gt;
-      &lt;/div&gt;
-      &lt;div class="modal-footer"&gt;
-        &lt;button class="btn btn-secondary btn-cancel"&gt;Cancel&lt;/button&gt;
-        &lt;button class="btn btn-primary btn-confirm"&gt;OK&lt;/button&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;!-- For Vanilla: Custom markup --&gt;
-&lt;div id="modal-vanilla" style="display:none"&gt;
-  &lt;div class="my-custom-dialog"&gt;
-    &lt;p class="confirm-message"&gt;&lt;/p&gt;
-    &lt;button class="btn-cancel"&gt;No&lt;/button&gt;
-    &lt;button class="btn-confirm"&gt;Yes&lt;/button&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</code></pre>
-
-                <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
-                <pre class="m-0"><code class="language-javascript">// Config for Bootstrap form
-new KrisForm(document.getElementById('form-bs'), {
-  modalId: 'modal-bs', // Modal ID
-  dependencies: [{
-    source: "bs_sw", condition: "checked === true", 
-    action: "enable", inverse_action: "disable", target: "bs_data",
-    confirm: "Enable admin mode?" // Confirmation text
-  }]
-});
-
-// Config for Vanilla form
-new KrisForm(document.getElementById('form-vanilla'), {
-  modalId: 'modal-vanilla',
-  dependencies: [{
-    source: "v_sw", condition: "checked === true", 
-    action: "enable", inverse_action: "disable", target: "v_data",
-    confirm: "Delete archive?"
-  }]
-});</code></pre>
-            </div>
-        </section>
-
-        <!-- Example 3 -->
         <section id="ex-i18n">
-            <h2>3. Localization (Error Translation)</h2>
+            <h2>2. Localization (Error Translation)</h2>
             <p>
                 You can globally override error texts via the
                 <code>window.KrisFormTranslateMessages</code> object.
@@ -971,9 +1025,9 @@ new KrisForm(document.getElementById('form-i18n'));</code></pre>
             </div>
         </section>
 
-        <!-- Example 4 -->
-        <section id="ex-computed">
-            <h2>4. Computed Values</h2>
+        <!-- Example 3 -->
+                <section id="ex-computed">
+                    <h2>3. Computed Values</h2>
             <p>
                 Use the <code>set_computed_value</code> action to perform arithmetic calculations based on other fields.
                 Supports <code>+ - * /</code> operators and <code>min/max</code> functions.
@@ -1018,8 +1072,8 @@ new KrisForm(document.getElementById('form-computed'), {
         </section>
 
         <!-- Example 5: Dynamic Data -->
-        <section id="ex-data">
-            <h2>5. Dynamic Data Loading (AJAX)</h2>
+                <section id="ex-data">
+            <h2>4. Dynamic Data Loading (AJAX)</h2>
             <p>
                 KrisForm can automatically fetch data from an API and populate a field (Select/Input) when conditions are met.
                 <br>Use the <code>data-url</code> property. The <code>{value}</code> placeholder is replaced by the source field's value.
@@ -1099,6 +1153,40 @@ new KrisForm(document.getElementById('form-computed'), {
                         <pre class="m-0"><code class="language-html">&lt;!-- The library will select 'option_b' once data arrives --&gt;
 &lt;select name="city" data-value="option_b"&gt;&lt;/select&gt;</code></pre>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ex-async">
+            <h2>5. Async Validation (Remote)</h2>
+            <p>
+                Use <code>remote:endpoint</code> rule to validate data on the server (e.g. check if username is taken).
+                <br>The library automatically debounces input (500ms) and sets a loading state.
+            </p>
+
+            <div class="ex-card">
+                <div class="ex-view">
+                    <form id="form-async" novalidate onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Username</label>
+                            <input name="username" class="form-control" data-validator="required,remote:check-user" placeholder="Try 'admin' (taken)">
+                            <div class="invalid-feedback"></div>
+                            <div class="form-text text-muted">Busy names: admin, root, test</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="ex-code p-4">
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">HTML Markup</h6>
+                    <pre class="m-0 mb-4"><code class="language-html">&lt;input name="username" 
+       data-validator="required,remote:check-user"&gt;</code></pre>
+
+                    <h6 class="text-white-50 text-uppercase small fw-bold mb-2">JavaScript</h6>
+                    <pre class="m-0"><code class="language-javascript">new KrisForm(document.getElementById('form-async'), {
+    endpoint: "/api/v1/" // Base API URL
+});
+// HTML: data-validator="required,remote:check-user"
+// Request: GET /api/v1/check-user?value=admin
+// Response: { "valid": false, "message": "Username taken" }</code></pre>
                 </div>
             </div>
         </section>
@@ -1215,21 +1303,95 @@ new KrisForm(document.getElementById('form-computed'), {
                 ]
             });
 
-            // 2. Modals
+            // Helper for safe init
+            const safeInit = (id, opts) => {
+                const el = document.getElementById(id);
+                if (el) new KrisForm(el, opts);
+            };
+
+            // 2. Modals (Event Driven)
             const confirmLogic = (src, target, msg) => [{
-                source: src, condition: "checked === true", action: "enable", inverse_action: "disable", target: target, confirm: msg
+                source: src, condition: "value === true", action: "enable", inverse_action: "disable", target: target, confirm: msg
             }];
 
-            // BS Instance
-            new KrisForm(document.getElementById('form-bs'), {
-                dependencies: confirmLogic("bs_sw", "bs_data", "Enable admin mode?"),
-                modalId: 'modal-bs' // ID Bootstrap modal
-            });
+            
 
-            // Vanilla Instance
-            new KrisForm(document.getElementById('form-vanilla'), {
-                dependencies: confirmLogic("v_sw", "v_data", "This action is irreversible. Continue?"),
-                modalId: 'modal-vanilla' // ID Vanilla modal
+            // Adapters Demo (Target Interaction)
+            const logEl = document.getElementById('adapter-log');
+            const log = (msg) => { 
+                if(logEl) {
+                    logEl.textContent = `[Log] ${msg}`;
+                    logEl.classList.remove('text-success', 'text-danger');
+                    logEl.classList.add(msg.includes('Cancelled') ? 'text-danger' : 'text-success');
+                    setTimeout(() => logEl.textContent = '', 3000);
+                }
+            };
+
+            const adapterWrapper = document.getElementById('adapter-demo-wrapper');
+                        if (adapterWrapper) {
+                            new KrisForm(adapterWrapper, {
+                                dependencies: [
+                                    { 
+                                        source: "ad_bs", condition: "checked === true", 
+                                        action: "enable", inverse_action: "disable", 
+                                        target: "adapter-target",
+                                        confirm: "Unlock field via Bootstrap?" 
+                                    },
+                                    { 
+                                        source: "ad_v", condition: "checked === true", 
+                                        action: "enable", inverse_action: "disable", 
+                                        target: "adapter-target",
+                                        confirm: "Unlock field via Vanilla?" 
+                                    }
+                                ]
+                            });
+                        }
+
+            // --- UI ADAPTER FOR DEMO ---
+            document.addEventListener('krisform:confirm', (e) => {
+                e.preventDefault(); // Stop native confirm
+                const { message, onConfirm, onCancel, trigger } = e.detail;
+                
+                log(`Event received. Source: ${trigger.name || trigger.id}`);
+
+                // Determine which modal to use
+                const isBootstrapDemo = ['bs_sw', 'ad_bs'].includes(trigger.name);
+                const modalId = isBootstrapDemo ? 'modal-bs' : 'modal-vanilla';
+                const el = document.getElementById(modalId);
+
+                // Setup Text
+                el.querySelector('.confirm-message').textContent = message;
+
+                // Setup Buttons
+                const btnOk = el.querySelector('.btn-confirm');
+                const btnCancel = el.querySelector('.btn-cancel');
+
+                // Handlers
+                const close = () => {
+                    if(isBootstrapDemo) {
+                        bootstrap.Modal.getInstance(el).hide();
+                    } else {
+                        el.classList.remove('show');
+                    }
+                };
+
+                btnOk.onclick = () => { 
+                    onConfirm(); 
+                    close();
+                    log('Action Confirmed');
+                };
+                btnCancel.onclick = () => { 
+                    onCancel(); 
+                    close();
+                    log('Action Cancelled');
+                };
+
+                // Show
+                if(isBootstrapDemo) {
+                    new bootstrap.Modal(el).show();
+                } else {
+                    el.classList.add('show');
+                }
             });
 
             // 3. I18n Demo
@@ -1307,6 +1469,57 @@ new KrisForm(document.getElementById('form-computed'), {
                     }
                 ]
             });
+
+            // 7. Async Validation Demo
+                        // Mock Fetch for Demo purposes
+                        const originalFetch = window.fetch;
+                        window.fetch = async (url) => {
+                            if (url.includes('check-user')) {
+                                // Extract value param
+                                const val = new URLSearchParams(url.split('?')[1]).get('value');
+                                await new Promise(r => setTimeout(r, 600)); // Simulate latency
+
+                                const taken = ['admin', 'root', 'test'].includes(val);
+                                return {
+                                    ok: true,
+                                    json: async () => ({
+                                        valid: !taken,
+                                        message: taken ? `Username '${val}' is already taken.` : ''
+                                    })
+                                };
+                            }
+                            return originalFetch(url);
+                        };
+
+                        new KrisForm(document.getElementById('form-async'), {
+                            endpoint: "/api/mock/",
+                            validationMode: "immediate" // To trigger async check while typing
+                        });
+
+                        // 6. Validation Modes Demo
+                        let vModeInstance = null;
+                        window.updateVMode = function(mode) {
+                const el = document.getElementById('form-modes');
+                
+                // Clear previous state
+                if (vModeInstance) vModeInstance.destroy();
+                el.reset();
+                el.querySelectorAll('.is-invalid').forEach(e => e.classList.remove('is-invalid'));
+                el.querySelectorAll('.invalid-feedback').forEach(e => e.style.display = 'none');
+
+                // Update Code Block
+                const delayStr = mode === 'delayed' ? ', validationDelay: 300' : '';
+                document.getElementById('code-modes').textContent = `new KrisForm(el, { validationMode: '${mode}'${delayStr} });`;
+                if(window.Prism) Prism.highlightElement(document.getElementById('code-modes'));
+
+                // Init new
+                vModeInstance = new KrisForm(el, {
+                    validationMode: mode,
+                    validationDelay: 300
+                });
+            };
+            // Initial init
+            window.updateVMode('lazy');
         });
     </script>
 </body>

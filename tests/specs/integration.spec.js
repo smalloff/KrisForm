@@ -12,17 +12,24 @@ describe('KrisForm Integration', () => {
     };
 
     // Setup helper
-    function createForm(html) {
+    function createForm(html, options = {}) {
         if (container) document.body.removeChild(container);
         container = document.createElement('div');
         container.innerHTML = html;
         document.body.appendChild(container);
         form = container.querySelector('form');
-        return new KrisForm(form, { updateDelay: 0 }); // 0 delay for instant tests
+        return new KrisForm(form, { updateDelay: 0, ...options }); // 0 delay for instant tests
     }
 
     it('should show error on invalid input', async () => {
         const kris = createForm(`
+            <form>
+                <div class="input-group">
+                    <input name="username" data-validator="required">
+                    <div class="invalid-feedback"></div>
+                </div>
+            </form>
+        `, { validationMode: 'immediate' }); // Explicitly set immediate mode
             <form>
                 <div class="input-group">
                     <input name="username" data-validator="required">
@@ -276,6 +283,133 @@ describe('KrisForm Integration', () => {
             await wait(100);
 
             expect(callCount).toBe(1);
+
+        } finally {
+            window.fetch = originalFetch;
+        }
+    });
+
+    it('should support Delayed validation mode', async () => {
+        const kris = createForm(`
+            <form>
+                <input name="delayed" data-validator="min:3">
+            </form>
+        `, { validationMode: 'delayed', validationDelay: 100 });
+
+        const input = form.querySelector('[name="delayed"]');
+        
+        // Input 'a' (invalid)
+        input.value = 'a';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Should not be invalid yet
+        expect(input.classList.contains('is-invalid')).toBe(false);
+        
+        // Wait > 100ms
+        await wait(150);
+        
+        // Now should be invalid
+        expect(input.classList.contains('is-invalid')).toBe(true);
+    });
+
+    it('should support Blur validation mode', async () => {
+        const kris = createForm(`
+            <form>
+                <input name="blur_test" data-validator="required">
+            </form>
+        `, { validationMode: 'blur' });
+
+        const input = form.querySelector('[name="blur_test"]');
+        
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Should ignore input event
+        expect(input.classList.contains('is-invalid')).toBe(false);
+        
+        // Trigger blur
+        input.dispatchEvent(new Event('focusout', { bubbles: true }));
+        
+        expect(input.classList.contains('is-invalid')).toBe(true);
+    });
+
+    it('should support Lazy validation mode (Blur then Input)', async () => {
+        const kris = createForm(`
+            <form>
+                <input name="lazy_test" data-validator="min:3">
+            </form>
+        `, { validationMode: 'lazy' });
+
+        const input = form.querySelector('[name="lazy_test"]');
+        
+        // 1. First input (invalid) -> No error (Lazy)
+        input.value = 'a';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(input.classList.contains('is-invalid')).toBe(false);
+        
+        // 2. Blur -> Error appears
+        input.dispatchEvent(new Event('focusout', { bubbles: true }));
+        expect(input.classList.contains('is-invalid')).toBe(true);
+        
+        // 3. Input again (valid) -> Error clears IMMEDIATELY (because field is dirty/invalid)
+        input.value = 'abc';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(input.classList.contains('is-invalid')).toBe(false);
+    });
+
+    it('should handle Async Remote validation', async () => {
+        const originalFetch = window.fetch;
+        let fetchUrl = '';
+        
+        // Mock fetch
+        window.fetch = (url) => {
+            fetchUrl = url;
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    // Simulate server logic: "admin" is taken (invalid)
+                    const isTaken = url.includes('admin');
+                    resolve({
+                        ok: true,
+                        json: () => Promise.resolve({ 
+                            valid: !isTaken, 
+                            message: isTaken ? 'Username taken' : '' 
+                        })
+                    });
+                }, 50);
+            });
+        };
+
+        try {
+            // Use immediate mode to trigger logic fast, but remote check has fixed 500ms debounce inside library
+            const kris = createForm(`
+                <form>
+                    <input name="username" data-validator="required,remote:check_user">
+                    <div class="invalid-feedback"></div>
+                </form>
+            `, { validationMode: 'immediate' });
+
+            const input = form.querySelector('[name="username"]');
+            const feedback = form.querySelector('.invalid-feedback');
+
+            // 1. Enter taken username
+            input.value = 'admin';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Should be valid sync (required passed), but waiting for async debounce (500ms)
+            // Wait for debounce + fetch
+            await wait(600);
+            
+            expect(fetchUrl).toContain('check_user');
+            expect(input.classList.contains('is-invalid')).toBe(true);
+            expect(feedback.textContent).toBe('Username taken');
+
+            // 2. Enter valid username
+            input.value = 'user1';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            await wait(600);
+            
+            expect(input.classList.contains('is-invalid')).toBe(false);
 
         } finally {
             window.fetch = originalFetch;
