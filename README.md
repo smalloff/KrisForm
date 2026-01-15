@@ -12,7 +12,7 @@
 *   🧮 **Calculations**: Built-in math engine for computed fields (`max`, `min`, `sum` logic).
 *   🔗 **Dependency Management**: Powerful logic engine to Show/Hide/Require fields based on other field values.
 *   ⚡ **High Performance**: Debounced events and optimized DOM traversal.
-*   🎨 **Customizable**: Configurable CSS classes, selectors, and error messages.
+*   🧩 **UI Adapters (Dialogs)**: Agnostic event-driven architecture for confirmation modals (Bootstrap, SweetAlert, etc).
 *   🌍 **I18n Support**: Easy localization for error messages.
 
 ## Installation
@@ -270,6 +270,12 @@ KrisForm comes with a massive list of built-in validators. You can chain them us
 | :--- | :--- | :--- |
 | `ext` | `jpg;png` | File extension must match list (semicolon separated). |
 | `image` | - | Alias for common image extensions. |
+
+### Server-Side (Async)
+
+| Rule | Parameter | Description |
+| :--- | :--- | :--- |
+| `remote` | `path` | Sends GET request to `endpoint/path?value=...`. Debounced (500ms). Expects JSON `{ "valid": true }`. |
 
 ## Customizing Messages
 
