@@ -225,4 +225,60 @@ describe('KrisForm Integration', () => {
             document.body.removeChild(formEl);
         }
     });
+
+    it('should avoid duplicate requests (race condition protection)', async () => {
+        const originalFetch = window.fetch;
+        let callCount = 0;
+        
+        // Mock fetch with a slight delay to simulate network latency
+        window.fetch = (url) => {
+            callCount++;
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        ok: true,
+                        json: () => Promise.resolve({ value: 'loaded' })
+                    });
+                }, 50); // 50ms network delay
+            });
+        };
+
+        try {
+            const html = `
+                <form>
+                    <input name="trigger">
+                    <input name="target">
+                </form>
+            `;
+            createForm(html);
+            const kris = new KrisForm(form, {
+                updateDelay: 0,
+                dependencies: [{
+                    source: 'trigger',
+                    condition: "value.length > 0",
+                    action: 'set_value',
+                    'data-url': '/api/data', // data-url trigger
+                    target: 'target'
+                }]
+            });
+
+            const input = form.querySelector('[name="trigger"]');
+            input.value = 'a';
+            
+            // Trigger input (starts fetch 1)
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Trigger change immediately (simulating fast user action or browser behavior)
+            // Without fix, this starts fetch 2 because fetch 1 hasn't resolved yet
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Wait for fetches to resolve
+            await wait(100);
+
+            expect(callCount).toBe(1);
+
+        } finally {
+            window.fetch = originalFetch;
+        }
+    });
 });

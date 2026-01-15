@@ -1119,6 +1119,10 @@
             const cacheKey = `${urlPath}:${sourceValue}`;
             if (targetEl._lastLoadedValue === cacheKey) return;
 
+            // [Security/Performance] Prevent race condition: if request for this key is pending, skip
+            if (targetEl._pendingLoadKey === cacheKey) return;
+            targetEl._pendingLoadKey = cacheKey;
+
             let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
             const encodedVal = encodeURIComponent(sourceValue);
 
@@ -1161,6 +1165,11 @@
                     console.warn("[KrisForm] Data load failed:", error);
                 })
                 .finally(() => {
+                    // Cleanup pending flag to allow retry on next interaction if needed
+                    if (targetEl._pendingLoadKey === cacheKey) {
+                        delete targetEl._pendingLoadKey;
+                    }
+
                     targetEl._krisReqCount--;
                     
                     // Only restore state when ALL active requests are finished
