@@ -163,6 +163,32 @@ KrisForm can fetching data from an API and populate a field (Select/Input) when 
     *   *Label keys:* `label`, `name`, `title`, `value`.
 *   **For `<input>`**: Single value (String/Number) or object `{ "value": "result" }`.
 
+### Remote Validation (Server-Side)
+
+For checks that require backend logic (e.g., uniqueness, promo codes), use the `remote` validator. This runs asynchronously after synchronous checks pass.
+
+**Usage:**
+```html
+<input name="username" data-validator="required, remote:users/check">
+```
+
+**How it works:**
+1.  **Debounce**: Validation triggers only after the user stops typing for **500ms**.
+2.  **Request**: Sends a `GET` request to the configured `endpoint` + `path`.
+    *   Example: `https://api.mysite.com/users/check?value=userinput`
+3.  **Loading State**: Adds `.is-loading` class to the input during the request (useful for showing spinners).
+4.  **Caching**: Results are cached. Repeating the same value won't trigger a new network request.
+
+**Expected JSON Response:**
+The server must return a JSON object with a `valid` boolean. Optionally, provide a `message` to override the default error.
+
+```json
+{
+    "valid": false,
+    "message": "This username is already taken"
+}
+```
+
 ## Validation Rules
 
 KrisForm comes with a massive list of built-in validators. You can chain them using commas: `data-validator="required, email, min:5"`.
