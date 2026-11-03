@@ -87,28 +87,37 @@
 
     // --- API ---
 
+    let testQueue = Promise.resolve();
+
     global.describe = (name, fn) => {
         currentSuite = name;
-        results.push({ type: 'suite', name });
-        console.group(`%c${name}`, outputStyles.suite);
+        testQueue = testQueue.then(() => {
+            results.push({ type: 'suite', name });
+            console.group(`%c${name}`, outputStyles.suite);
+        });
         try {
             fn();
         } catch (e) {
             console.error(e);
         }
-        console.groupEnd();
+        testQueue = testQueue.then(() => {
+            console.groupEnd();
+        });
     };
 
-    global.it = async (name, fn) => {
-        try {
-            await fn();
-            results.push({ type: 'test', passed: true, name, suite: currentSuite });
-            console.log(`%c✓ ${name}`, outputStyles.pass);
-        } catch (e) {
-            results.push({ type: 'test', passed: false, name, suite: currentSuite, error: e.message });
-            console.error(`%c✕ ${name}`, outputStyles.fail, e.message);
-        }
-        renderUI();
+    global.it = (name, fn) => {
+        const suiteName = currentSuite;
+        testQueue = testQueue.then(async () => {
+            try {
+                await fn();
+                results.push({ type: 'test', passed: true, name, suite: suiteName });
+                console.log(`%c✓ ${name}`, outputStyles.pass);
+            } catch (e) {
+                results.push({ type: 'test', passed: false, name, suite: suiteName, error: e.message });
+                console.error(`%c✕ ${name}`, outputStyles.fail, e.message);
+            }
+            renderUI();
+        });
     };
 
     global.expect = (value) => new Expectation(value);

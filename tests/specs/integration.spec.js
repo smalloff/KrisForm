@@ -30,13 +30,6 @@ describe('KrisForm Integration', () => {
                 </div>
             </form>
         `, { validationMode: 'immediate' }); // Explicitly set immediate mode
-            <form>
-                <div class="input-group">
-                    <input name="username" data-validator="required">
-                    <div class="invalid-feedback"></div>
-                </div>
-            </form>
-        `);
 
         const input = form.querySelector('[name="username"]');
         const feedback = form.querySelector('.invalid-feedback');
@@ -414,5 +407,42 @@ describe('KrisForm Integration', () => {
         } finally {
             window.fetch = originalFetch;
         }
+    });
+
+    it('should validate composite editor with nested divs and hidden textarea', async () => {
+        const kris = createForm(`
+            <form>
+                <div class="mb-3" data-field-container="body">
+                    <div class="field-inner-wrapper">
+                        <div class="smallstore-editor-wrapper" data-field-name="body" data-validator="required,min:20">
+                            <div class="editor-toolbar">
+                                <input type="color" value="#2563eb">
+                            </div>
+                            <div class="editor-content-container">
+                                <div class="editor-visual-area">
+                                    <div contenteditable="true" class="ProseMirror"><p>Short</p></div>
+                                </div>
+                                <textarea name="body" id="body" class="editor-raw-textarea" style="display:none" required data-validator="required,min:20">Short</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        `, { validationMode: 'blur' });
+
+        const wrapper = form.querySelector('.smallstore-editor-wrapper');
+        const textarea = form.querySelector('textarea[name="body"]');
+
+        // 1. Fails min:20 when content is too short
+        expect(kris.validateAll()).toBe(false);
+        expect(wrapper.classList.contains('is-invalid')).toBe(true);
+
+        // 2. Passes when textarea has valid content (>= 20 chars)
+        textarea.value = 'This editor content has more than twenty characters.';
+        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+
+        expect(kris.validateAll()).toBe(true);
+        expect(wrapper.classList.contains('is-invalid')).toBe(false);
+        expect(textarea.classList.contains('is-invalid')).toBe(false);
     });
 });

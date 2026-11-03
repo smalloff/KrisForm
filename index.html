@@ -874,10 +874,11 @@ window.KrisFormTranslateMessages.magic_code = "Wrong code. Expected: %s";</code>
                 <span class="badge bg-light text-dark border">enable / disable</span>
                 <span class="badge bg-light text-dark border">required / optional</span>
                 <span class="badge bg-light text-dark border">check / uncheck</span>
-                <span class="badge bg-light text-dark border">clear</span>
+                <span class="badge bg-light text-dark border">clear / focus</span>
                 <span class="badge bg-light text-dark border">set_value:X</span>
                 <span class="badge bg-light text-dark border">set_computed_value:expr</span>
-                <span class="badge bg-light text-dark border">add_class:cls</span>
+                <span class="badge bg-light text-dark border">filter_options</span>
+                <span class="badge bg-light text-dark border">add_class:cls / remove_class:cls</span>
             </div>
         </section>
 
@@ -887,13 +888,12 @@ window.KrisFormTranslateMessages.magic_code = "Wrong code. Expected: %s";</code>
             <ul>
                 <li><code>value</code> — value of the <code>source</code> field.</li>
                 <li><code>fields.OtherName</code> — value of another form field.</li>
-                <li><code>source.checked</code> — (for checkboxes) true/false.</li>
-                <li><strong>Logic:</strong> <code>===</code>, <code>!==</code>, <code>&gt;</code>, <code>&lt;</code>,
-                    <code>&&</code>, <code>||</code>.</li>
-                <li><strong>Math:</strong> <code>+</code>, <code>max(a, b...)</code>, <code>min(a, b...)</code>.</li>
+                <li><code>checked</code> / <code>source.checked</code> — (for checkboxes) true/false.</li>
+                <li><strong>Logic:</strong> <code>===</code>, <code>!==</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&lt;</code>,
+                    <code>&amp;&amp;</code>, <code>||</code>, <code>!</code> (unary NOT).</li>
+                <li><strong>Math:</strong> <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, parentheses <code>(...)</code>, <code>max(a, b...)</code>, <code>min(a, b...)</code>.</li>
             </ul>
-            
-            </section>
+        </section>
 
                     <!-- Example 1 -->
         <section id="ex-complex">

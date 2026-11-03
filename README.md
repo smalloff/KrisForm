@@ -116,16 +116,19 @@ KrisForm allows you to define complex logic using a JSON structure.
 *   `required` / `optional`
 *   `set_value:value`
 *   `set_computed_value:expression`
+*   `filter_options`
+*   `add_class:cls` / `remove_class:cls`
 *   `check` / `uncheck`
-*   `clear`
+*   `focus` / `clear`
 
 ### Expression Syntax
 
 Used in `condition` (boolean logic) and `set_computed_value` (math).
 
-*   **Variables**: `value` (current source), `fields.FieldName` (other fields).
-*   **Logic**: `===`, `!==`, `>`, `<`, `&&`, `||`.
-*   **Math**: `+`, `-`, `*`, `/`, `max(a, b...)`, `min(a, b...)`.
+*   **Variables**: `value` (current source), `fields.FieldName` (other fields), `checked`, `disabled`, `readonly`, `required`, `visible`.
+*   **Logic**: `===`, `!==`, `==`, `!=`, `>=`, `<=`, `>`, `<`, `&&`, `||`, `!` (unary NOT, e.g. `!checked`).
+*   **String / Array Methods**: `.includes(...)`, `.startsWith(...)`, `.endsWith(...)`.
+*   **Math**: `+`, `-`, `*`, `/`, parentheses `(...)`, `max(a, b...)`, `min(a, b...)`.
 
 **Example (Computed Field):**
 ```javascript
@@ -303,16 +306,53 @@ KrisForm comes with a massive list of built-in validators. You can chain them us
 | :--- | :--- | :--- |
 | `remote` | `path` | Sends GET request to `endpoint/path?value=...`. Debounced (500ms). Expects JSON `{ "valid": true }`. |
 
+### Composite Fields, WYSIWYG Editors & `<select multiple>`
+
+KrisForm natively supports composite widgets (such as TipTap / ProseMirror / CKEditor WYSIWYG editors, `contenteditable` blocks, and nested `div` wrappers):
+
+*   **Hidden Backing Inputs**: If a `<textarea>` or `<input>` has `data-validator` and is hidden (e.g. `.d-none` in visual editor mode) while a sibling `[contenteditable="true"]` area inside `.field-inner-wrapper` is visible, KrisForm automatically validates the backing control and applies `.is-invalid` and `.invalid-feedback` to the visible editor wrapper.
+*   **Wrapper `div` Validation**: If `data-validator` or `data-field` is placed on a `<div>` wrapper, KrisForm automatically resolves the inner named control (`textarea[name]`, `input[name]`, `select[name]`), `[contenteditable="true"]`, or `textContent`.
+*   **`<select multiple>`**: `getFieldValue` returns an array of selected option values, and `setElementValue` accepts an array or comma-separated string.
+
+### Instance API Methods
+
+```javascript
+const kris = new KrisForm(formElement, options);
+
+// Synchronous validation of all fields
+const isValid = kris.validateAll();
+
+// Asynchronous validation (awaits pending remote:... checks)
+const isAsyncValid = await kris.validateAllAsync();
+
+// Single field validation (sync & async)
+kris.validateField(inputEl);
+await kris.validateFieldAsync(inputEl);
+
+// Clean up event listeners and pending timers
+kris.destroy();
+```
+
 ## Customizing Messages
 
-You can set error messages globally via the `KrisFormTranslateMessages` object, or locally via data attributes.
+You can set error messages via data attributes, per-form instance options, or globally via `window.KrisFormTranslateMessages`.
 
 **Option 1: Data Attributes**
 ```html
 <input name="age" data-validator="min:18" data-msg-min="You must be at least 18 years old">
 ```
 
-**Option 2: Global Configuration**
+**Option 2: Per-Form Instance Configuration**
+```javascript
+new KrisForm(formElement, {
+    i18n: {
+        required: "This field is mandatory",
+        min: "Value must be at least %s"
+    }
+});
+```
+
+**Option 3: Global Configuration**
 ```javascript
 window.KrisFormTranslateMessages = {
     default: "Invalid value",

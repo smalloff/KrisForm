@@ -50,13 +50,78 @@
 
     const Utils = {
         /**
+         * Resolves the underlying value-holding element when a container/wrapper (e.g. div) is passed
+         * @param {HTMLElement} el
+         * @returns {HTMLElement}
+         */
+        resolveControl(el) {
+            if (!el || !el.tagName) return el;
+            const tag = el.tagName;
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return el;
+            if (!el.querySelector) return el;
+
+            const fieldName = el.getAttribute('data-field-name') || el.getAttribute(CONSTANTS.ATTR.FIELD) || el.getAttribute('name');
+            if (fieldName) {
+                const named = el.querySelector(`[name="${CSS.escape(fieldName)}"]`);
+                if (named) return named;
+            }
+
+            const control = el.querySelector('textarea[name], select[name], input[name]:not([type="hidden"]), input[type="hidden"][name], textarea, select');
+            if (control) return control;
+
+            const editable = el.querySelector('[contenteditable="true"]');
+            if (editable) return editable;
+
+            return el;
+        },
+
+        /**
+         * Resolves the visible element to receive error classes and feedback when the control itself is hidden
+         * @param {HTMLElement} el
+         * @param {Object} [config]
+         * @returns {HTMLElement}
+         */
+        resolveVisualElement(el, config) {
+            if (!el) return el;
+            if (el.offsetWidth || el.offsetHeight || el.getClientRects().length) return el;
+            if (!el.closest) return el;
+
+            const innerSel = (config && config.selectors && config.selectors.innerWrapper) || DEFAULTS.selectors.innerWrapper;
+            const innerWrap = el.closest(innerSel);
+            if (innerWrap && innerWrap.firstElementChild && innerWrap.firstElementChild !== el) {
+                const candidate = innerWrap.firstElementChild;
+                if (candidate.offsetWidth || candidate.offsetHeight || candidate.getClientRects().length) {
+                    return candidate;
+                }
+            }
+
+            if (el.parentElement && el.parentElement !== el.form) {
+                const parent = el.parentElement;
+                if (parent.offsetWidth || parent.offsetHeight || parent.getClientRects().length) {
+                    return parent;
+                }
+            }
+            return el;
+        },
+
+        /**
          * Safe check for element visibility
          * @param {HTMLElement} el 
          * @returns {boolean}
          */
         isVisible(el) {
             if (!el) return false;
-            return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+            if (el.offsetWidth || el.offsetHeight || el.getClientRects().length) return true;
+            if (!el.closest) return false;
+
+            const scope = el.closest(DEFAULTS.selectors.innerWrapper) || el.parentElement;
+            if (scope && scope !== el.form && scope !== document.body) {
+                const editable = scope.querySelector('[contenteditable="true"]');
+                if (editable && (editable.offsetWidth || editable.offsetHeight || editable.getClientRects().length)) {
+                    return true;
+                }
+            }
+            return false;
         },
 
         /**
@@ -78,6 +143,48 @@
          */
         setText(el, text) {
             if (el) el.textContent = text;
+        },
+
+        /**
+         * Sanitizes HTML string for status messages by stripping dangerous tags, event handlers, and script URIs
+         * @param {string} html
+         * @returns {string}
+         */
+        sanitizeHTML(html) {
+            if (!html || typeof html !== 'string') return '';
+            if (typeof DOMParser === 'undefined') {
+                return html.replace(/<[^>]*>?/gm, '');
+            }
+            const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+            const dangerousTags = doc.body.querySelectorAll('script, iframe, object, embed, style, link, meta, base, form, input, button, textarea, svg, math');
+            dangerousTags.forEach(node => node.remove());
+
+            const all = doc.body.querySelectorAll('*');
+            all.forEach(el => {
+                for (let i = el.attributes.length - 1; i >= 0; i--) {
+                    const attr = el.attributes[i];
+                    const name = attr.name.toLowerCase();
+                    const val = attr.value.trim().toLowerCase();
+                    if (name.startsWith('on') || name === 'srcdoc' || name === 'formaction') {
+                        el.removeAttribute(attr.name);
+                    } else if ((name === 'href' || name === 'src' || name === 'xlink:href' || name === 'action') && /^(javascript|vbscript|data):/i.test(val)) {
+                        el.removeAttribute(attr.name);
+                    }
+                }
+            });
+            return doc.body.innerHTML;
+        },
+
+        /**
+         * Validates that a URL is safe for fetch requests (prevents javascript:/data:/vbscript: schemes)
+         * @param {string} url
+         * @returns {boolean}
+         */
+        isSafeUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            const trimmed = url.trim();
+            if (!trimmed || /^(javascript|vbscript|data):/i.test(trimmed)) return false;
+            return true;
         },
 
         /**
@@ -104,12 +211,17 @@
         getFieldValue(elements) {
             if (!elements || elements.length === 0) return null;
             
-            // Optimization: Early exit for single standard input
+            // Optimization: Early exit for single standard input or container
             if (elements.length === 1) {
-                const el = elements[0];
+                const el = this.resolveControl(elements[0]);
                 if (el.type === 'checkbox') return el.checked;
                 if (el.type === 'radio') return el.checked ? el.value : null;
-                return el.value;
+                if (el.tagName === 'SELECT' && el.multiple) {
+                    return Array.from(el.selectedOptions, opt => opt.value);
+                }
+                if (el.value !== undefined) return el.value;
+                if (el.hasAttribute && el.hasAttribute('data-value')) return el.getAttribute('data-value');
+                return el.textContent || '';
             }
 
             // Group handling
@@ -117,10 +229,11 @@
             const radios = [];
             let standard = null;
 
-            for (const el of elements) {
+            for (const rawEl of elements) {
+                const el = this.resolveControl(rawEl);
                 if (el.type === 'checkbox') checkboxes.push(el);
                 else if (el.type === 'radio') radios.push(el);
-                else if (!standard && el.type !== 'hidden') standard = el; // Prefer visible
+                else if (!standard && el.type !== 'hidden' && el.value !== undefined) standard = el; // Prefer visible
             }
 
             if (checkboxes.length > 0) {
@@ -133,25 +246,41 @@
                 return checked ? checked.value : null;
             }
 
-            // Fallback to first element if logic above didn't catch (e.g. only hidden inputs)
-            return standard ? standard.value : elements[0].value;
+            // Fallback to first element if logic above didn't catch (e.g. only hidden inputs or div containers)
+            const fallback = standard || this.resolveControl(elements[0]);
+            if (fallback.tagName === 'SELECT' && fallback.multiple) {
+                return Array.from(fallback.selectedOptions, opt => opt.value);
+            }
+            if (fallback.value !== undefined) return fallback.value;
+            if (fallback.hasAttribute && fallback.hasAttribute('data-value')) return fallback.getAttribute('data-value');
+            return fallback.textContent || '';
         },
 
         setElementValue(el, val) {
-            if (el.type === "checkbox") {
-                el.checked = (val === true || val === "true" || val === 1 || val === "1");
-            } else if (el.type === "radio") {
+            const target = this.resolveControl(el);
+            if (target.type === "checkbox") {
+                target.checked = (val === true || val === "true" || val === 1 || val === "1");
+            } else if (target.type === "radio") {
                 // For radio, we rely on the group logic, but if individual element is targeted:
-                if (el.name) {
-                    const radios = document.getElementsByName(el.name);
+                if (target.name) {
+                    const radios = document.getElementsByName(target.name);
                     for(let i=0; i < radios.length; i++) {
                         radios[i].checked = (radios[i].value === String(val));
                     }
                 } else {
-                     el.checked = (el.value === String(val));
+                     target.checked = (target.value === String(val));
                 }
+            } else if (target.tagName === "SELECT" && target.multiple) {
+                const values = Array.isArray(val)
+                    ? val.map(String)
+                    : (val === null || val === undefined || val === '' ? [] : String(val).split(',').map(s => s.trim()));
+                for (let i = 0; i < target.options.length; i++) {
+                    target.options[i].selected = values.includes(target.options[i].value);
+                }
+            } else if (target.value !== undefined) {
+                target.value = (val === null || val === undefined) ? '' : val;
             } else {
-                el.value = (val === null || val === undefined) ? '' : val;
+                target.textContent = (val === null || val === undefined) ? '' : String(val);
             }
         }
     };
@@ -240,16 +369,21 @@
             const operators = ["===", "!==", "==", "!=", ">=", "<=", ">", "<"];
             
             for (const op of operators) {
-                const idx = expr.indexOf(op);
+                const idx = this._findSplitIndex(expr, op);
                 if (idx !== -1) {
                     const left = expr.substring(0, idx).trim();
                     const right = expr.substring(idx + op.length).trim();
                     return this._compare(
-                        this._resolve(left, context, fieldProvider), 
-                        this._resolve(right, context, fieldProvider), 
+                        this._evaluateRecursive(left, context, fieldProvider), 
+                        this._evaluateRecursive(right, context, fieldProvider), 
                         op
                     );
                 }
+            }
+
+            // Unary logical NOT
+            if (expr.startsWith("!")) {
+                return !this._evaluateRecursive(expr.slice(1).trim(), context, fieldProvider);
             }
 
             // Method whitelist (Security)
@@ -265,8 +399,8 @@
             if (expr.startsWith("Math.max(") || expr.startsWith("max(")) return this._evalMathFunction(expr, "max", context, fieldProvider);
             if (expr.startsWith("Math.min(") || expr.startsWith("min(")) return this._evalMathFunction(expr, "min", context, fieldProvider);
 
-            // Arithmetic Operations (Simple parser for + - * /)
-            if (/[\+\-\*\/]/.test(expr)) {
+            // Arithmetic Operations (Precedence-aware parser for + - * /)
+            if (this._hasArithmeticOperator(expr)) {
                 return this._evalArithmetic(expr, context, fieldProvider);
             }
 
@@ -274,12 +408,78 @@
             return val;
         }
 
+        static _hasArithmeticOperator(expr) {
+            if ((expr.startsWith("'") && expr.endsWith("'")) || (expr.startsWith('"') && expr.endsWith('"'))) return false;
+            if (!isNaN(Number(expr)) && expr !== "") return false;
+            let depth = 0;
+            let inQuote = null;
+            for (let i = 0; i < expr.length; i++) {
+                const ch = expr[i];
+                if (inQuote) {
+                    if (ch === inQuote && expr[i - 1] !== '\\') inQuote = null;
+                    continue;
+                }
+                if (ch === "'" || ch === '"') {
+                    inQuote = ch;
+                    continue;
+                }
+                if (ch === '(') depth++;
+                else if (ch === ')') depth--;
+                else if (depth === 0 && (ch === '+' || ch === '*' || ch === '/' || (ch === '-' && i > 0))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static _splitTopLevel(expr, ops) {
+            const parts = [];
+            let depth = 0;
+            let inQuote = null;
+            let lastIdx = 0;
+            for (let i = 0; i < expr.length; i++) {
+                const ch = expr[i];
+                if (inQuote) {
+                    if (ch === inQuote && expr[i - 1] !== '\\') inQuote = null;
+                    continue;
+                }
+                if (ch === "'" || ch === '"') {
+                    inQuote = ch;
+                    continue;
+                }
+                if (ch === '(') depth++;
+                else if (ch === ')') depth--;
+                else if (depth === 0 && ops.includes(ch)) {
+                    // Ignore unary +/- at the start of a term or immediately after another operator
+                    if ((ch === '+' || ch === '-') && expr.substring(lastIdx, i).trim() === '') {
+                        continue;
+                    }
+                    parts.push({ term: expr.substring(lastIdx, i).trim(), op: ch });
+                    lastIdx = i + 1;
+                }
+            }
+            if (parts.length === 0) return null;
+            parts.push({ term: expr.substring(lastIdx).trim(), op: null });
+            return parts;
+        }
+
         static _evalMathFunction(expr, func, context, fieldProvider) {
             // Extract arguments: max(a, b + c, d)
             const argsStr = expr.substring(expr.indexOf('(') + 1, expr.lastIndexOf(')'));
-            const parts = argsStr.split(',').map(s => s.trim());
+            const parts = [];
+            let depth = 0;
+            let lastIdx = 0;
+            for (let i = 0; i < argsStr.length; i++) {
+                if (argsStr[i] === '(') depth++;
+                else if (argsStr[i] === ')') depth--;
+                else if (depth === 0 && argsStr[i] === ',') {
+                    parts.push(argsStr.substring(lastIdx, i).trim());
+                    lastIdx = i + 1;
+                }
+            }
+            parts.push(argsStr.substring(lastIdx).trim());
 
-            const values = parts.map(p => {
+            const values = parts.filter(Boolean).map(p => {
                 // Recursive eval for arguments (supports "fields.a + fields.b")
                 return this._evaluateRecursive(p, context, fieldProvider);
             });
@@ -292,12 +492,33 @@
         }
 
         static _evalArithmetic(expr, context, fieldProvider) {
-            // Very simple parser: splits by operators and aggregates.
-            const terms = expr.split('+');
-            if (terms.length > 1) {
-                return terms.reduce((acc, term) => acc + (Number(this._resolve(term.trim(), context, fieldProvider)) || 0), 0);
+            // 1. Addition & Subtraction (lowest precedence)
+            const addParts = this._splitTopLevel(expr, ['+', '-']);
+            if (addParts) {
+                let acc = Number(this._evaluateRecursive(addParts[0].term, context, fieldProvider)) || 0;
+                for (let i = 0; i < addParts.length - 1; i++) {
+                    const op = addParts[i].op;
+                    const nextVal = Number(this._evaluateRecursive(addParts[i + 1].term, context, fieldProvider)) || 0;
+                    if (op === '+') acc += nextVal;
+                    else if (op === '-') acc -= nextVal;
+                }
+                return acc;
             }
-            return 0;
+
+            // 2. Multiplication & Division (higher precedence)
+            const mulParts = this._splitTopLevel(expr, ['*', '/']);
+            if (mulParts) {
+                let acc = Number(this._evaluateRecursive(mulParts[0].term, context, fieldProvider)) || 0;
+                for (let i = 0; i < mulParts.length - 1; i++) {
+                    const op = mulParts[i].op;
+                    const nextVal = Number(this._evaluateRecursive(mulParts[i + 1].term, context, fieldProvider)) || 0;
+                    if (op === '*') acc *= nextVal;
+                    else if (op === '/') acc = nextVal === 0 ? 0 : acc / nextVal;
+                }
+                return acc;
+            }
+
+            return Number(this._resolve(expr, context, fieldProvider)) || 0;
         }
 
         static _evalMethod(expr, context, method, fieldProvider) {
@@ -512,7 +733,7 @@
                 // --- Colors ---
                 hexcolor: (val) => /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val),
                 rgb: (val) => /^rgb\(\s*(?:(?:\d{1,2}|1\d\d|2(?:[0-4]\d|5[0-5]))\s*,?){3}\)$/.test(val),
-                rgba: (val) => /^rgba\(\s*(?:(?:\d{1,2}|1\d\d|2(?:[0-4]\d|5[0-5]))\s*,?){3}\s*\s*(?:[0-9]*\.[0-9]+|[0-9]+)\)$/.test(val),
+                rgba: (val) => /^rgba\(\s*(?:(?:\d{1,2}|1\d\d|2(?:[0-4]\d|5[0-5]))\s*,?){3}\s*(?:[0-9]*\.[0-9]+|[0-9]+)\)$/.test(val),
                 hsl: (val) => /^hsl\(\s*(?:\d+|\d*\.\d+)\s*,\s*(?:\d+|\d*\.\d+)%\s*,\s*(?:\d+|\d*\.\d+)%\s*\)$/.test(val),
                 hsla: (val) => /^hsla\(\s*(?:\d+|\d*\.\d+)\s*,\s*(?:\d+|\d*\.\d+)%\s*,\s*(?:\d+|\d*\.\d+)%\s*,\s*(?:[0-9]*\.[0-9]+|[0-9]+)\)$/.test(val),
                 
@@ -622,26 +843,50 @@
             this.rules.iscolor = this.rules.hexcolor;
             this.rules.country_code = (val) => /^[A-Z]{2}$/.test(val);
         }
+        _parseRules(rulesStr) {
+            const rawTokens = rulesStr.split(',').map(r => r.trim()).filter(Boolean);
+            const parsed = [];
+
+            for (const token of rawTokens) {
+                let name = token, param = null;
+                const eqIdx = token.indexOf('=');
+                const colIdx = token.indexOf(':');
+
+                if (eqIdx !== -1 && (colIdx === -1 || eqIdx < colIdx)) {
+                    name = token.slice(0, eqIdx).trim();
+                    param = token.slice(eqIdx + 1).trim();
+                } else if (colIdx !== -1) {
+                    name = token.slice(0, colIdx).trim();
+                    param = token.slice(colIdx + 1).trim();
+                } else if (parsed.length > 0 && !this.rules[name] && name !== 'omitempty') {
+                    // Support comma-separated params for list rules like oneof:a,b,c or neof:a,b,c
+                    const prev = parsed[parsed.length - 1];
+                    if (prev.name === 'oneof' || prev.name === 'neof') {
+                        prev.param = prev.param ? `${prev.param},${name}` : name;
+                        continue;
+                    }
+                }
+
+                parsed.push({ name, param });
+            }
+            return parsed;
+        }
+
         validate(value, rulesStr, el) {
             if (!rulesStr) return { valid: true };
-            const rules = rulesStr.split(',').map(r => r.trim());
+            const parsedRules = this._parseRules(rulesStr);
 
-            for (const r of rules) {
-                let name = r, param = null;
-                // Supports rule=param or rule:param
-                if (r.includes('=')) [name, param] = r.split('=');
-                else if (r.includes(':')) [name, param] = r.split(':');
-
+            for (const { name, param } of parsedRules) {
                 const fn = this.rules[name];
                 if (!fn) continue;
 
                 // "Required" rules run always. Others skip if empty.
-                                const isEmpty = (value === null || value === '' || value === undefined);
-                                const isRequiredRule = ['required', 'required_with', 'required_without'].includes(name);
+                const isEmpty = (value === null || value === '' || value === undefined || (Array.isArray(value) && value.length === 0));
+                const isRequiredRule = ['required', 'required_with', 'required_without'].includes(name);
 
-                                if (!isRequiredRule && isEmpty) continue;
+                if (!isRequiredRule && isEmpty) continue;
 
-                                if (!fn(value, param, el)) {
+                if (!fn(value, param, el)) {
                     return { valid: false, failed: name, param: param };
                 }
             }
@@ -702,13 +947,26 @@
         }
 
         /**
-         * Clean up listeners and memory
+         * Clean up listeners, pending timers, and memory
          */
         destroy() {
             this.el.removeEventListener('input', this._handleInput);
             this.el.removeEventListener('change', this._handleChange);
             this.el.removeEventListener('focusout', this._handleFocusOut);
             this.el.removeEventListener('submit', this._handleSubmit);
+
+            const validatorNodes = this.el.querySelectorAll(`[${CONSTANTS.ATTR.VALIDATOR}]`);
+            validatorNodes.forEach(node => {
+                if (node._krisValTimeout) {
+                    clearTimeout(node._krisValTimeout);
+                    delete node._krisValTimeout;
+                }
+                if (node._krisAsyncTimeout) {
+                    clearTimeout(node._krisAsyncTimeout);
+                    delete node._krisAsyncTimeout;
+                }
+                delete node._krisAsyncPending;
+            });
             
             this.state.initialValues.clear();
             this.state.lastCommittedValues.clear();
@@ -750,13 +1008,39 @@
 
         // --- Event Handlers (Delegated) ---
 
+        _resolveValidatorTarget(target) {
+            if (!target || !(target instanceof Element)) return null;
+            if (target.matches(`[${CONSTANTS.ATTR.VALIDATOR}]`)) {
+                const ctrl = Utils.resolveControl(target);
+                if (ctrl && ctrl !== target && ctrl.hasAttribute(CONSTANTS.ATTR.VALIDATOR)) {
+                    return ctrl;
+                }
+                return target;
+            }
+            const ancestor = target.closest(`[${CONSTANTS.ATTR.VALIDATOR}]`);
+            if (ancestor && this.el.contains(ancestor)) {
+                const ctrl = Utils.resolveControl(ancestor);
+                if (ctrl === target || target.isContentEditable || (target.closest && target.closest('[contenteditable="true"]'))) {
+                    return ctrl && ctrl.hasAttribute(CONSTANTS.ATTR.VALIDATOR) ? ctrl : ancestor;
+                }
+            }
+            if (target.isContentEditable || (target.closest && target.closest('[contenteditable="true"]'))) {
+                const scope = target.closest(this.config.selectors.innerWrapper) || Utils.findFieldContainer(target, this.config);
+                if (scope) {
+                    return scope.querySelector(`textarea[${CONSTANTS.ATTR.VALIDATOR}], input[${CONSTANTS.ATTR.VALIDATOR}], select[${CONSTANTS.ATTR.VALIDATOR}], [${CONSTANTS.ATTR.VALIDATOR}]`);
+                }
+            }
+            return null;
+        }
+
         _handleInput(e) {
             const el = e.target;
             // Dirty check on global form level
             this._checkDirty();
 
+            const valEl = this._resolveValidatorTarget(el);
             // Validate on input
-            if (el.matches('[data-validator]')) {
+            if (valEl) {
                 const mode = this.config.validationMode;
                 
                 if (mode !== 'blur') {
@@ -764,20 +1048,21 @@
                         if (mode === 'lazy') {
                             // Lazy mode: validate on input ONLY if field is already invalid (to clear error)
                             // Initial validation happens on blur
-                            if (el.classList.contains(this.config.classes.invalid[0])) {
-                                this.validateField(el);
+                            const visEl = Utils.resolveVisualElement(valEl, this.config);
+                            if (valEl.classList.contains(this.config.classes.invalid[0]) || (visEl && visEl.classList.contains(this.config.classes.invalid[0]))) {
+                                this.validateField(valEl);
                             }
                         } else {
                             // Immediate or Delayed mode
-                            this.validateField(el);
+                            this.validateField(valEl);
                         }
                     };
 
                     if (mode === 'delayed') {
-                        if (el._krisValTimeout) clearTimeout(el._krisValTimeout);
-                        el._krisValTimeout = setTimeout(() => {
+                        if (valEl._krisValTimeout) clearTimeout(valEl._krisValTimeout);
+                        valEl._krisValTimeout = setTimeout(() => {
                             runValidation();
-                            delete el._krisValTimeout;
+                            delete valEl._krisValTimeout;
                         }, this.config.validationDelay);
                     } else {
                         runValidation();
@@ -796,8 +1081,9 @@
             const el = e.target;
             this._checkDirty();
 
-            if (el.matches('[data-validator]')) {
-                this.validateField(el);
+            const valEl = this._resolveValidatorTarget(el);
+            if (valEl) {
+                this.validateField(valEl);
             }
 
             // Dependencies (With potential confirmation)
@@ -807,10 +1093,13 @@
         }
 
         _handleFocusOut(e) {
-            const el = e.target;
-            if (el.matches('[data-validator]')) {
-                this.validateField(el);
+            const valEl = this._resolveValidatorTarget(e.target);
+            if (!valEl) return;
+            if (valEl !== e.target && e.relatedTarget) {
+                const container = Utils.findFieldContainer(valEl, this.config);
+                if (container && container.contains(e.relatedTarget)) return;
             }
+            this.validateField(valEl);
         }
 
         _handleSubmit(e) {
@@ -918,6 +1207,11 @@
             
             el._krisAsyncTimeout = setTimeout(() => {
                 let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
+                if (!Utils.isSafeUrl(url)) {
+                    el.classList.remove('is-loading');
+                    delete el._krisAsyncPending;
+                    return;
+                }
                 const encodedVal = encodeURIComponent(value);
                 
                 if (url.includes('{value}')) {
@@ -960,39 +1254,138 @@
             const inputs = this.el.querySelectorAll(`[${CONSTANTS.ATTR.VALIDATOR}]`);
             // Convert to array to avoid live NodeList issues
             const inputsArr = Array.from(inputs);
+            const seenControls = new Set();
             
             for (const el of inputsArr) {
+                const ctrl = Utils.resolveControl(el);
+                if (ctrl && ctrl !== el && ctrl.hasAttribute(CONSTANTS.ATTR.VALIDATOR)) {
+                    el.classList.remove(...this.config.classes.invalid);
+                    continue;
+                }
+                if (seenControls.has(ctrl)) continue;
+                seenControls.add(ctrl);
                 if (!this.validateField(el)) valid = false;
             }
             return valid;
         }
 
+        /**
+         * Asynchronous field validation (waits for remote rule if present)
+         * @param {HTMLElement} el
+         * @returns {Promise<boolean>}
+         */
+        async validateFieldAsync(el) {
+            const syncValid = this.validateField(el);
+            if (syncValid) return true;
+            if (!el._krisAsyncPending) return false;
+
+            const rules = el.getAttribute(CONSTANTS.ATTR.VALIDATOR) || "";
+            const remoteMatch = rules.match(/remote:([^,]+)/);
+            if (!remoteMatch) return false;
+
+            if (el._krisAsyncTimeout) {
+                clearTimeout(el._krisAsyncTimeout);
+                delete el._krisAsyncTimeout;
+            }
+
+            const urlPath = remoteMatch[1];
+            const value = this._getElValue(el);
+            const cacheKey = `${urlPath}:${value}`;
+            let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
+            if (!Utils.isSafeUrl(url)) {
+                el.classList.remove('is-loading');
+                delete el._krisAsyncPending;
+                return false;
+            }
+
+            const encodedVal = encodeURIComponent(value);
+            if (url.includes('{value}')) {
+                url = url.replace('{value}', encodedVal);
+            } else {
+                const separator = url.includes('?') ? '&' : '?';
+                url += `${separator}value=${encodedVal}`;
+            }
+
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (!el._krisAsyncCache) el._krisAsyncCache = {};
+                el._krisAsyncCache[cacheKey] = data;
+
+                if (data.valid) {
+                    this.clearError(el);
+                    return true;
+                } else {
+                    this.setError(el, 'remote', null, data.message);
+                    return false;
+                }
+            } catch (e) {
+                console.error(e);
+                return false;
+            } finally {
+                el.classList.remove('is-loading');
+                delete el._krisAsyncPending;
+            }
+        }
+
+        /**
+         * Asynchronous form validation (resolves all sync & remote validators)
+         * @returns {Promise<boolean>}
+         */
+        async validateAllAsync() {
+            const inputs = this.el.querySelectorAll(`[${CONSTANTS.ATTR.VALIDATOR}]`);
+            const inputsArr = Array.from(inputs);
+            const seenControls = new Set();
+            let valid = true;
+
+            for (const el of inputsArr) {
+                const ctrl = Utils.resolveControl(el);
+                if (ctrl && ctrl !== el && ctrl.hasAttribute(CONSTANTS.ATTR.VALIDATOR)) {
+                    el.classList.remove(...this.config.classes.invalid);
+                    continue;
+                }
+                if (seenControls.has(ctrl)) continue;
+                seenControls.add(ctrl);
+                const fieldValid = await this.validateFieldAsync(el);
+                if (!fieldValid) valid = false;
+            }
+            return valid;
+        }
+
         setError(el, rule, param, customMsg = null) {
+            const visualEl = Utils.resolveVisualElement(el, this.config);
             el.classList.add(...this.config.classes.invalid);
+            if (visualEl !== el) {
+                visualEl.classList.add(...this.config.classes.invalid);
+            }
             
-            let feedback = this._findFeedback(el);
+            let feedback = this._findFeedback(visualEl);
             if (!feedback) {
                 // Create feedback element if missing
                 feedback = document.createElement('div');
                 feedback.className = this.config.selectors.feedback.replace('.', '');
-                const container = el.closest('.input-group') || el.parentElement;
-                container.appendChild(feedback);
+                const container = visualEl.closest('.input-group') || visualEl.parentElement;
+                if (container) container.appendChild(feedback);
             }
             
             let msg = customMsg;
             
             if (!msg) {
-                const i18n = global.KrisFormTranslateMessages || {};
+                const globalI18n = global.KrisFormTranslateMessages || {};
+                const localI18n = this.config.i18n || {};
+                const ctrl = Utils.resolveControl(el);
                 // Look for data-msg-rule attribute first
-                msg = el.getAttribute(`data-msg-${rule}`);
+                msg = el.getAttribute(`data-msg-${rule}`) || (ctrl && ctrl !== el ? ctrl.getAttribute(`data-msg-${rule}`) : null);
                 
                 if (!msg) {
-                    if (i18n[rule]) {
-                        msg = i18n[rule].replace('%s', param || '');
-                    } else if (i18n.default) {
-                        msg = i18n.default.replace('%s', rule);
+                    const tpl = localI18n[rule] || globalI18n[rule];
+                    const defTpl = localI18n.default || globalI18n.default;
+                    if (tpl) {
+                        msg = tpl.replace('%s', param || '');
+                    } else if (defTpl) {
+                        msg = defTpl.replace('%s', rule);
                     } else {
-                        msg = `${this.config.i18n.defaultError}: ${rule}`;
+                        msg = `${localI18n.defaultError || DEFAULTS.i18n.defaultError}: ${rule}`;
                     }
                 }
             }
@@ -1003,19 +1396,29 @@
         }
 
         clearError(el) {
+            const visualEl = Utils.resolveVisualElement(el, this.config);
             el.classList.remove(...this.config.classes.invalid);
-            const feedback = this._findFeedback(el);
+            if (visualEl !== el) {
+                visualEl.classList.remove(...this.config.classes.invalid);
+            }
+            const feedback = this._findFeedback(visualEl);
             if (feedback) feedback.style.display = 'none';
+            if (visualEl !== el) {
+                const innerFeedback = this._findFeedback(el);
+                if (innerFeedback) innerFeedback.style.display = 'none';
+            }
         }
 
         scrollToError() {
             const firstError = this.el.querySelector(`.${this.config.classes.invalid[0]}`);
             if (firstError) {
-                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const visualEl = Utils.resolveVisualElement(firstError, this.config);
+                visualEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
         _findFeedback(el) {
+            if (!el) return null;
             // Strategy 1: Next sibling
             let sib = el.nextElementSibling;
             const cls = this.config.selectors.feedback.replace('.', '');
@@ -1024,13 +1427,16 @@
                 sib = sib.nextElementSibling;
             }
             // Strategy 2: Parent search
-            return el.parentElement.querySelector(this.config.selectors.feedback);
+            return el.parentElement ? el.parentElement.querySelector(this.config.selectors.feedback) : null;
         }
 
         _getElValue(el) {
-            if (el.type === 'checkbox') return el.checked ? el.value : '';
-            if (el.type === 'radio') return el.checked ? el.value : '';
-            return el.value;
+            const ctrl = Utils.resolveControl(el);
+            if (ctrl.type === 'checkbox') return ctrl.checked ? ctrl.value : '';
+            if (ctrl.type === 'radio') return ctrl.checked ? ctrl.value : '';
+            if (ctrl.value !== undefined) return ctrl.value;
+            if (ctrl.hasAttribute && ctrl.hasAttribute('data-value')) return ctrl.getAttribute('data-value');
+            return ctrl.textContent || '';
         }
 
         // --- Dependencies ---
@@ -1168,6 +1574,10 @@
             targetEl._pendingLoadKey = cacheKey;
 
             let url = this.config.endpoint ? this.config.endpoint + urlPath : urlPath;
+            if (!Utils.isSafeUrl(url)) {
+                delete targetEl._pendingLoadKey;
+                return;
+            }
             const encodedVal = encodeURIComponent(sourceValue);
 
             // Support {value} placeholder or append as query param
@@ -1413,10 +1823,11 @@
 
             const textEl = msgBox.querySelector(this.config.selectors.statusText);
             if (show && messageKey) {
-                const i18n = global.KrisFormTranslateMessages || {};
+                const globalI18n = global.KrisFormTranslateMessages || {};
+                const localI18n = this.config.i18n || {};
                 if (textEl) {
-                    // Allow HTML for links and formatting (Trusted source assumed)
-                    textEl.innerHTML = i18n[messageKey] || messageKey;
+                    const rawMsg = localI18n[messageKey] || globalI18n[messageKey] || messageKey;
+                    textEl.innerHTML = Utils.sanitizeHTML(rawMsg);
                 }
                 msgBox.classList.remove('d-none');
             } else {

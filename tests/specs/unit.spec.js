@@ -108,14 +108,26 @@ describe('Evaluator (Security & Logic)', () => {
             expect(Eval.evaluate('true || false && false', null, () => {}, () => {})).toBe(true);
         });
 
-    it('should evaluate arithmetic expressions', () => {
+    it('should evaluate arithmetic expressions (+, -, *, / and precedence)', () => {
         // Simple Addition
         expect(Eval.evaluate('10 + 20', null, () => {}, () => {})).toBe(30);
+        expect(Eval.evaluate('25 - 10 - 3', null, () => {}, () => {})).toBe(12);
+        expect(Eval.evaluate('6 * 7', null, () => {}, () => {})).toBe(42);
+        expect(Eval.evaluate('20 / 4', null, () => {}, () => {})).toBe(5);
+        expect(Eval.evaluate('10 + 5 * 2', null, () => {}, () => {})).toBe(20);
+        expect(Eval.evaluate('(10 + 5) * 2', null, () => {}, () => {})).toBe(30);
+        expect(Eval.evaluate('10 / 0', null, () => {}, () => {})).toBe(0);
         
         // With Context Resolution (simulated via internal method)
         // Evaluator.evaluate() wraps context in {value: ...}, so we use _evaluateRecursive directly for testing custom context
         const ctx = { a: 5, b: 10 };
         expect(Eval._evaluateRecursive('a + b + 5', ctx, () => {})).toBe(20);
+        expect(Eval._evaluateRecursive('b * a - 15', ctx, () => {})).toBe(35);
+    });
+
+    it('should evaluate unary logical NOT (!)', () => {
+        expect(Eval.evaluate('!false', null, () => false, () => {})).toBe(true);
+        expect(Eval.evaluate('!checked', null, (s) => s === 'checked' ? false : null, () => {})).toBe(true);
     });
 
     it('should evaluate math functions (max/min)', () => {
@@ -158,5 +170,64 @@ describe('Validator Advanced Patterns', () => {
         
         expect(validator.validate('#ff0000', 'hexcolor', el).valid).toBe(true);
         expect(validator.validate('red', 'hexcolor', el).valid).toBe(false);
+    });
+});
+
+describe('Utils (Nested Divs & Composite Controls)', () => {
+    const Utils = window.KrisFormUtils;
+
+    it('should resolve named textarea inside nested div wrapper', () => {
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-field-name', 'body');
+        wrapper.innerHTML = `
+            <div class="toolbar"><input type="color" value="#2563eb"><input type="file"></div>
+            <div class="content">
+                <div contenteditable="true"><p>Visual text</p></div>
+                <textarea name="body">Markdown text content</textarea>
+            </div>
+        `;
+
+        const resolved = Utils.resolveControl(wrapper);
+        expect(resolved.tagName).toBe('TEXTAREA');
+        expect(Utils.getFieldValue([wrapper])).toBe('Markdown text content');
+    });
+
+    it('should extract textContent from contenteditable or plain nested divs when no form control exists', () => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = '<div><span>Nested div text</span></div>';
+        expect(Utils.getFieldValue([wrapper])).toBe('Nested div text');
+
+        Utils.setElementValue(wrapper, 'Updated text');
+        expect(Utils.getFieldValue([wrapper])).toBe('Updated text');
+    });
+
+    it('should support select[multiple] getFieldValue and setElementValue', () => {
+        const select = document.createElement('select');
+        select.multiple = true;
+        select.innerHTML = '<option value="a">A</option><option value="b">B</option><option value="c">C</option>';
+
+        Utils.setElementValue(select, ['a', 'c']);
+        expect(Utils.getFieldValue([select])).toEqual(['a', 'c']);
+    });
+
+    it('should support comma-separated oneof rules alongside chained rules', () => {
+        const validator = new KrisFormValidator();
+        const el = document.createElement('input');
+
+        expect(validator.validate('green', 'required,oneof:red,green,blue', el).valid).toBe(true);
+        expect(validator.validate('yellow', 'required,oneof:red,green,blue', el).valid).toBe(false);
+    });
+
+    it('SECURITY: should sanitize HTML messages and block dangerous URLs', () => {
+        const dirty = '<b>Safe</b><script>alert(1)</script><a href="javascript:evil()" onclick="steal()">Link</a>';
+        const clean = Utils.sanitizeHTML(dirty);
+        expect(clean.includes('<script')).toBe(false);
+        expect(clean.includes('javascript:')).toBe(false);
+        expect(clean.includes('onclick')).toBe(false);
+        expect(clean.includes('<b>Safe</b>')).toBe(true);
+
+        expect(Utils.isSafeUrl('javascript:alert(1)')).toBe(false);
+        expect(Utils.isSafeUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
+        expect(Utils.isSafeUrl('/api/check?v=1')).toBe(true);
     });
 });
