@@ -1,6 +1,6 @@
 /**
  * KrisForm - Universal Form Library
- * Version: 2.2.2
+ * Version: 2.3.0
  * Author: smalloff
  * Description: Secure, high-performance vanilla JS library for form validation, dependency management, and state handling.
  */
@@ -396,8 +396,8 @@
             }
 
             // Math Functions Support
-            if (expr.startsWith("Math.max(") || expr.startsWith("max(")) return this._evalMathFunction(expr, "max", context, fieldProvider);
-            if (expr.startsWith("Math.min(") || expr.startsWith("min(")) return this._evalMathFunction(expr, "min", context, fieldProvider);
+            const mathMatch = expr.match(/^(?:Math\.)?(max|min|round|floor|ceil|abs)\(/);
+            if (mathMatch && expr.endsWith(")")) return this._evalMathFunction(expr, mathMatch[1], context, fieldProvider);
 
             // Arithmetic Operations (Precedence-aware parser for + - * /)
             if (this._hasArithmeticOperator(expr)) {
@@ -488,6 +488,10 @@
 
             if (func === 'max') return Math.max(...nums);
             if (func === 'min') return Math.min(...nums);
+            if (func === 'round') return Math.round(nums[0] || 0);
+            if (func === 'floor') return Math.floor(nums[0] || 0);
+            if (func === 'ceil') return Math.ceil(nums[0] || 0);
+            if (func === 'abs') return Math.abs(nums[0] || 0);
             return 0;
         }
 
@@ -671,29 +675,32 @@
             this.rules = {
                 // --- Basic ---
                 required: (val, _, el) => {
-                    if (el.type === 'checkbox') return el.checked;
-                    if (el.type === 'radio') return !!val;
+                    if (el && el.type === 'checkbox') return el.checked;
+                    if (el && el.type === 'radio') return !!val;
+                    if (Array.isArray(val)) return val.length > 0;
                     if (val === undefined || val === null) return false;
                     return String(val).trim().length > 0;
                 },
                 required_with: (val, p, el) => {
                     const otherVal = getOtherVal(el, p);
-                    if (otherVal && String(otherVal).length > 0) return this.rules.required(val, null, el);
+                    const hasOther = Array.isArray(otherVal) ? otherVal.length > 0 : (otherVal && String(otherVal).length > 0);
+                    if (hasOther) return this.rules.required(val, null, el);
                     return true;
                 },
                 required_without: (val, p, el) => {
                     const otherVal = getOtherVal(el, p);
-                    if (!otherVal || String(otherVal).length === 0) return this.rules.required(val, null, el);
+                    const hasOther = Array.isArray(otherVal) ? otherVal.length > 0 : (otherVal && String(otherVal).length > 0);
+                    if (!hasOther) return this.rules.required(val, null, el);
                     return true;
                 },
                 
                 // --- Comparison ---
                 eq: (val, p) => String(val) === String(p),
                 ne: (val, p) => String(val) !== String(p),
-                lt: (val, p) => Number(val) < Number(p),
-                gt: (val, p) => Number(val) > Number(p),
-                lte: (val, p) => Number(val) <= Number(p),
-                gte: (val, p) => Number(val) >= Number(p),
+                lt: (val, p, el) => (el && (el.type === 'number' || el.type === 'range')) ? Number(val) < Number(p) : (Array.isArray(val) ? val.length < Number(p) : Number(val) < Number(p)),
+                gt: (val, p, el) => (el && (el.type === 'number' || el.type === 'range')) ? Number(val) > Number(p) : (Array.isArray(val) ? val.length > Number(p) : Number(val) > Number(p)),
+                lte: (val, p, el) => (el && (el.type === 'number' || el.type === 'range')) ? Number(val) <= Number(p) : (Array.isArray(val) ? val.length <= Number(p) : Number(val) <= Number(p)),
+                gte: (val, p, el) => (el && (el.type === 'number' || el.type === 'range')) ? Number(val) >= Number(p) : (Array.isArray(val) ? val.length >= Number(p) : Number(val) >= Number(p)),
                 
                 // Cross-Field Comparisons
                 eqfield: (val, p, el) => String(val) === String(getOtherVal(el, p)),
@@ -704,9 +711,9 @@
                 ltefield: (val, p, el) => Number(val) <= Number(getOtherVal(el, p)),
                 
                 // --- Numeric / Range / Length ---
-                len: (val, p) => String(val).length === Number(p),
-                min: (val, p, el) => (el.type === 'number' || el.type === 'range') ? Number(val) >= Number(p) : String(val).length >= Number(p),
-                max: (val, p, el) => (el.type === 'number' || el.type === 'range') ? Number(val) <= Number(p) : String(val).length <= Number(p),
+                len: (val, p) => Array.isArray(val) ? val.length === Number(p) : String(val).length === Number(p),
+                min: (val, p, el) => (el && (el.type === 'number' || el.type === 'range')) ? Number(val) >= Number(p) : (Array.isArray(val) ? val.length >= Number(p) : String(val).length >= Number(p)),
+                max: (val, p, el) => (el && (el.type === 'number' || el.type === 'range')) ? Number(val) <= Number(p) : (Array.isArray(val) ? val.length <= Number(p) : String(val).length <= Number(p)),
 
                 // --- Complexity (Count Matches) ---
                 min_alpha: (val, p) => (String(val).match(/[a-zA-Z]/g) || []).length >= Number(p),
@@ -829,13 +836,19 @@
                 boolean: (val) => ['true', 'false', '1', '0'].includes(String(val).toLowerCase()),
                 
                 // --- Files ---
-                ext: (val, p) => {
+                ext: (val, p, el) => {
                     if (!val) return true;
+                    const allowed = p.toLowerCase().split(';').map(s => s.trim()).filter(Boolean);
+                    if (el && el.files && el.files.length > 0) {
+                        return Array.from(el.files).every(f => {
+                            const fileExt = String(f.name).split('.').pop().toLowerCase();
+                            return allowed.includes(fileExt);
+                        });
+                    }
                     const ext = String(val).split('.').pop().toLowerCase();
-                    const allowed = p.toLowerCase().split(';').map(s => s.trim());
                     return allowed.includes(ext);
                 },
-                image: (val) => this.rules.ext(val, 'jpg;jpeg;png;gif;bmp;webp;svg;tiff;ico')
+                image: (val, _, el) => this.rules.ext(val, 'jpg;jpeg;png;gif;bmp;webp;svg;tiff;ico', el)
             };
             
             // Aliases & Legacy
@@ -920,6 +933,7 @@
             this._handleChange = this._handleChange.bind(this);
             this._handleFocusOut = this._handleFocusOut.bind(this);
             this._handleSubmit = this._handleSubmit.bind(this);
+            this._handleReset = this._handleReset.bind(this);
 
             this.init();
         }
@@ -954,6 +968,7 @@
             this.el.removeEventListener('change', this._handleChange);
             this.el.removeEventListener('focusout', this._handleFocusOut);
             this.el.removeEventListener('submit', this._handleSubmit);
+            this.el.removeEventListener('reset', this._handleReset);
 
             const validatorNodes = this.el.querySelectorAll(`[${CONSTANTS.ATTR.VALIDATOR}]`);
             validatorNodes.forEach(node => {
@@ -1004,6 +1019,16 @@
             this.el.addEventListener('change', this._handleChange);
             this.el.addEventListener('focusout', this._handleFocusOut);
             this.el.addEventListener('submit', this._handleSubmit);
+            this.el.addEventListener('reset', this._handleReset);
+        }
+
+        _handleReset() {
+            setTimeout(() => {
+                if (!this.el) return;
+                this.el.querySelectorAll(`[${CONSTANTS.ATTR.VALIDATOR}]`).forEach(el => this.clearError(el));
+                this.updateAllDependencies(true);
+                this._checkDirty();
+            }, 0);
         }
 
         // --- Event Handlers (Delegated) ---
@@ -1433,7 +1458,17 @@
         _getElValue(el) {
             const ctrl = Utils.resolveControl(el);
             if (ctrl.type === 'checkbox') return ctrl.checked ? ctrl.value : '';
-            if (ctrl.type === 'radio') return ctrl.checked ? ctrl.value : '';
+            if (ctrl.type === 'radio') {
+                if (ctrl.checked) return ctrl.value;
+                if (ctrl.name && this.el) {
+                    const group = Utils.findFieldElements(this.el, ctrl.name);
+                    return Utils.getFieldValue(group) || '';
+                }
+                return '';
+            }
+            if (ctrl.tagName === 'SELECT' && ctrl.multiple) {
+                return Array.from(ctrl.selectedOptions, opt => opt.value);
+            }
             if (ctrl.value !== undefined) return ctrl.value;
             if (ctrl.hasAttribute && ctrl.hasAttribute('data-value')) return ctrl.getAttribute('data-value');
             return ctrl.textContent || '';
@@ -1694,22 +1729,26 @@
 
         _applyAction(el, container, actionStr, sourceValue, isInit = false) {
             if (!actionStr) return;
-            const [action, param] = actionStr.split(":");
+            const colonIdx = actionStr.indexOf(":");
+            const action = colonIdx === -1 ? actionStr : actionStr.slice(0, colonIdx);
+            const param = colonIdx === -1 ? "" : actionStr.slice(colonIdx + 1);
             const isHidden = !Utils.isVisible(el);
             
             const actions = {
                 enable: () => this._toggleFieldState(el, container, true),
                 disable: () => this._toggleFieldState(el, container, false),
+                readonly: () => { Utils.resolveControl(el).readOnly = true; },
+                editable: () => { Utils.resolveControl(el).readOnly = false; },
                 show: () => this._toggleVisibility(el, container, true),
                 hide: () => this._toggleVisibility(el, container, false),
                 required: () => this._toggleRequired(el, container, true, isHidden),
                 optional: () => this._toggleRequired(el, container, false, isHidden),
                 set_value: () => !isHidden && Utils.setElementValue(el, param),
-                check: () => !isHidden && (el.checked = true),
-                uncheck: () => !isHidden && (el.checked = false),
-                add_class: () => container && !isHidden && container.classList.add(...param.split(" ")),
-                remove_class: () => container && !isHidden && container.classList.remove(...param.split(" ")),
-                focus: () => !isHidden && setTimeout(() => el.focus(), 50),
+                check: () => !isHidden && (Utils.resolveControl(el).checked = true),
+                uncheck: () => !isHidden && (Utils.resolveControl(el).checked = false),
+                add_class: () => container && !isHidden && param && container.classList.add(...param.split(" ").filter(Boolean)),
+                remove_class: () => container && !isHidden && param && container.classList.remove(...param.split(" ").filter(Boolean)),
+                focus: () => !isHidden && setTimeout(() => Utils.resolveControl(el).focus(), 50),
                 clear: () => !isHidden && Utils.setElementValue(el, ''),
                 filter_options: () => this._filterOptions(el, sourceValue),
                 

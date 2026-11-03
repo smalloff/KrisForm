@@ -130,9 +130,13 @@ describe('Evaluator (Security & Logic)', () => {
         expect(Eval.evaluate('!checked', null, (s) => s === 'checked' ? false : null, () => {})).toBe(true);
     });
 
-    it('should evaluate math functions (max/min)', () => {
+    it('should evaluate math functions (max/min/round/floor/ceil/abs)', () => {
         expect(Eval.evaluate('max(10, 20, 5)', null, () => {}, () => {})).toBe(20);
         expect(Eval.evaluate('min(10, 20, 5)', null, () => {}, () => {})).toBe(5);
+        expect(Eval.evaluate('round(4.6)', null, () => {}, () => {})).toBe(5);
+        expect(Eval.evaluate('floor(4.9)', null, () => {}, () => {})).toBe(4);
+        expect(Eval.evaluate('ceil(4.1)', null, () => {}, () => {})).toBe(5);
+        expect(Eval.evaluate('abs(-15)', null, () => {}, () => {})).toBe(15);
         
         // Nested logic inside functions
         expect(Eval.evaluate('max(10, 5 + 25)', null, () => {}, () => {})).toBe(30);
@@ -201,13 +205,19 @@ describe('Utils (Nested Divs & Composite Controls)', () => {
         expect(Utils.getFieldValue([wrapper])).toBe('Updated text');
     });
 
-    it('should support select[multiple] getFieldValue and setElementValue', () => {
+    it('should support select[multiple] getFieldValue, setElementValue, and array validation (required, len, min, max)', () => {
         const select = document.createElement('select');
         select.multiple = true;
         select.innerHTML = '<option value="a">A</option><option value="b">B</option><option value="c">C</option>';
 
+        const validator = new KrisFormValidator();
+        expect(validator.validate([], 'required', select).valid).toBe(false);
+
         Utils.setElementValue(select, ['a', 'c']);
-        expect(Utils.getFieldValue([select])).toEqual(['a', 'c']);
+        const val = Utils.getFieldValue([select]);
+        expect(val).toEqual(['a', 'c']);
+        expect(validator.validate(val, 'required,len:2,min:1,max:3', select).valid).toBe(true);
+        expect(validator.validate(val, 'min:3', select).valid).toBe(false);
     });
 
     it('should support comma-separated oneof rules alongside chained rules', () => {
