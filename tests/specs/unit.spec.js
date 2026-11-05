@@ -37,13 +37,24 @@ describe('Validator Engine', () => {
         expect(validator.validate('hi', 'min:3', elText).valid).toBe(false);
     });
 
-    it('should validate character complexity (min_lower/upper)', () => {
+    it('should validate character complexity (min_lower/upper/alpha/digit/symbol including Unicode)', () => {
         const el = document.createElement('input');
 
-        // Lowercase check
+        // Lowercase check (Latin & Cyrillic)
         expect(validator.validate('ABC', 'min_lower:1', el).valid).toBe(false);
         expect(validator.validate('ABCd', 'min_lower:1', el).valid).toBe(true);
+        expect(validator.validate('АБВг', 'min_lower:1', el).valid).toBe(true);
         expect(validator.validate('abc', 'min_lower:2', el).valid).toBe(true);
+
+        // Uppercase check (Latin & Cyrillic)
+        expect(validator.validate('abcdef', 'min_upper:2', el).valid).toBe(false);
+        expect(validator.validate('AbCdef', 'min_upper:2', el).valid).toBe(true);
+        expect(validator.validate('АбВгде', 'min_upper:2', el).valid).toBe(true);
+
+        // Digits & symbols
+        expect(validator.validate('Abcdef', 'min_digit:2', el).valid).toBe(false);
+        expect(validator.validate('Abc12def', 'min_digit:2', el).valid).toBe(true);
+        expect(validator.validate('Abc12!@', 'min_symbol:2', el).valid).toBe(true);
     });
 
     it('should handle multiple rules', () => {

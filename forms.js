@@ -716,11 +716,11 @@
                 max: (val, p, el) => (el && (el.type === 'number' || el.type === 'range')) ? Number(val) <= Number(p) : (Array.isArray(val) ? val.length <= Number(p) : String(val).length <= Number(p)),
 
                 // --- Complexity (Count Matches) ---
-                min_alpha: (val, p) => (String(val).match(/[a-zA-Z]/g) || []).length >= Number(p),
-                min_lower: (val, p) => (String(val).match(/[a-z]/g) || []).length >= Number(p),
-                min_upper: (val, p) => (String(val).match(/[A-Z]/g) || []).length >= Number(p),
+                min_alpha: (val, p) => (String(val).match(/[\p{L}]/gu) || []).length >= Number(p),
+                min_lower: (val, p) => (String(val).match(/[\p{Ll}]/gu) || []).length >= Number(p),
+                min_upper: (val, p) => (String(val).match(/[\p{Lu}]/gu) || []).length >= Number(p),
                 min_digit: (val, p) => (String(val).match(/[0-9]/g) || []).length >= Number(p),
-                min_symbol: (val, p) => (String(val).match(/[^a-zA-Z0-9\s]/g) || []).length >= Number(p),
+                min_symbol: (val, p) => (String(val).match(/[^\p{L}\p{N}\s]/gu) || []).length >= Number(p),
 
                 // --- Strings & Formats ---
                 alpha: (val) => /^[a-zA-Z]+$/.test(val),
